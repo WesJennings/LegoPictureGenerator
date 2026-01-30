@@ -1,0 +1,15 @@
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOExecption;
+import javax.imageio.ImageIO;
+
+public class loadImage {
+    public static void main(String[] args) throws IOExecption {
+        BufferedImage image = ImageIO.read.(ImageLoader.class.getResourceAsStream("/BackgroundSS.png"));
+        int width = image.getWidth();
+        int height = image.getHeight();
+        //Pixel color is image.getRGB(x,y)
+
+        
+      }
+  }
