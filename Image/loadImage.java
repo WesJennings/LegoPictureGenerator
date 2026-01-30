@@ -38,7 +38,7 @@ public class loadImage {
 
         // Select top left color to color whole block 
         // FUTURE: change this to be a function that gets the average color of the block
-        int rgb = src[by * width + bx];
+        int rgb = AverageColors(src, by, bx, yEnd, xEnd, width);
 
         //Loop through the individual block
         for(int y = by; y < yEnd; y++){
@@ -59,4 +59,34 @@ public class loadImage {
 
     return output;
   }  
+
+  private static int AverageColors(int[] src, int by, int bx, int yEnd, int xEnd, int width){
+    //Bit masking
+    int A = 0;
+    int R = 0;
+    int G = 0;
+    int B = 0;
+    int actualWidth = xEnd - bx;
+    int actualHeight = yEnd - by;
+    int count = actualWidth * actualHeight;
+
+    for(int y = by; y < yEnd; y++){
+        int row = y * width;
+        for(int x = bx; x < xEnd; x++){
+          int pixel = src[row + x];
+          
+          A += (pixel >>> 24) & 0xFF;
+          R += (pixel >>> 16) & 0xFF;
+          G += (pixel >>> 8) & 0xFF;
+          B += (pixel) & 0xFF;
+        }
+    }
+
+    A /= count;
+    R /= count;
+    G /= count;
+    B /= count;
+
+    return (A << 24) | (R << 16) | (G << 8) | B;
+  }
 }
