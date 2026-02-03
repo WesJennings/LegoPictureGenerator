@@ -2,6 +2,8 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import javax.imageio.ImageIO;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 
 public class loadImage {
   public static final int BLOCK_SIZE = 16;
@@ -14,6 +16,8 @@ public class loadImage {
     //Pixel color is image.getRGB(x,y)
 
     image = MergePixels(image, width, height, BLOCK_SIZE);
+
+    image = ReScale(image, width, height, BLOCK_SIZE);
 
     ImageIO.write(image,"png", new File("resources/output.png"));
   }
@@ -89,4 +93,26 @@ public class loadImage {
 
     return (A << 24) | (R << 16) | (G << 8) | B;
   }
+
+  private static BufferedImage ReScale(BufferedImage image, int width, int height, int blockSize){
+  int newWidth = width / blockSize;
+  int newHeight = height / blockSize;
+
+  BufferedImage output = new BufferedImage(newWidth, newHeight, BufferedImage.TYPE_INT_ARGB);
+  
+  // create a Graphics2D context that will draw to output
+  Graphics2D graphics = output.createGraphics();
+
+  // Tell java how to interpolate the pixels during the scale down
+  // Using nearest neighbor since I already averaged the colors
+  graphics.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+
+  graphics.drawImage(image, 0, 0, newWidth, newHeight, null);
+
+  graphics.dispose();
+
+  return output;
+  }
 }
+
+
