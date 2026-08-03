@@ -45,7 +45,7 @@ studs[][] ──► PlateCatalog ──► packers 1–6 ──► PackResult
                          PackBom / PackCompare / packed PNGs
 ```
 
-**Not packing’s job:** rewriting `studs`, drawing the flat mosaic (`output_lego.png`), or producing a left-to-right build order (list order is “placement order”).
+**Not packing’s job:** rewriting `studs`, drawing mosaics (`output.png`, `output_lego.png`, packed `output_lego_*.png`), or producing a left-to-right build order (list order is “placement order”).
 
 ---
 
