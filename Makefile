@@ -1,35 +1,41 @@
-# Run from project root:
-#   make        - compile
-#   make run    - compile and run loadImage
-#   make clean  - remove .class files
+# Lego Picture Generator — local website + CLI
+#
+#   make setup   - resolve backend deps + npm install
+#   make dev     - run API (:8080) and Vite dev server (:5173)
+#   make test    - backend tests + frontend type-check/build
+#   make build   - production build (web/dist + shaded backend JAR)
+#   make start   - single Java process serving API + built frontend
+#   make cli     - run the offline CLI on samples/Jarvis.png
 
-JAVAC ?= javac
-JAVA  ?= java
-CP     = lib/sqlite-jdbc-3.53.2.0.jar
-SRC    = Color/colorMatch.java \
-	Image/legoRender.java \
-	Image/pieceCount.java \
-	Pack/PlacedPart.java \
-	Pack/PackResult.java \
-	Pack/PlateCatalog.java \
-	Pack/GreedyPacker.java \
-	Pack/ExactIlpPacker.java \
-	Pack/RlePacker.java \
-	Pack/ComponentGreedyPacker.java \
-	Pack/DlxPacker.java \
-	Pack/AnnealPacker.java \
-	Pack/PackBom.java \
-	Pack/PackCompare.java \
-	Image/loadImage.java
-RUN_CP = $(CP):Color:Image:Pack
+MVNW = cd backend && ./mvnw
 
-.PHONY: all run clean
+.PHONY: setup dev test build start cli clean
 
-all:
-	$(JAVAC) -cp "$(CP)" $(SRC)
+setup:
+	$(MVNW) -q dependency:resolve
+	cd web && npm install
 
-run: all
-	$(JAVA) -cp "$(RUN_CP)" loadImage
+dev:
+	@echo "API on http://127.0.0.1:8080 — start 'cd web && npm run dev' in another terminal for the UI (http://localhost:5173)"
+	cd backend && LEGO_DB_PATH=../data/bricks.db LEGO_JOBS_PATH=../runtime/jobs \
+		./mvnw -q compile exec:java -Dexec.mainClass=com.legopicturegenerator.Application
+
+test:
+	$(MVNW) test
+	cd web && npm run build
+
+build:
+	cd web && npm run build
+	$(MVNW) -q package -DskipTests
+
+start: build
+	java -Xmx1g -jar backend/target/lego-picture-generator-0.1.0.jar
+
+cli:
+	cd backend && LEGO_DB_PATH=../data/bricks.db \
+		./mvnw -q compile exec:java -Dexec.mainClass=com.legopicturegenerator.cli.CliApplication \
+		-Dexec.args="../samples/Jarvis.png ../runtime/cli 80 greedy"
 
 clean:
-	rm -f Color/*.class Image/*.class Pack/*.class
+	$(MVNW) -q clean
+	rm -rf web/dist web/node_modules runtime

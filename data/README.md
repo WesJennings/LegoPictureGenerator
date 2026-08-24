@@ -20,9 +20,14 @@ Build or download via [rebrickable-sqlite](https://github.com/jncraton/rebrickab
 
 ### Callers
 
-- [`Color/colorMatch`](../Color/README.md) — `loadElements` / `loadColors` (default part `3024`)
-- [`Pack/PlateCatalog`](../Pack/README.md) — which plate sizes exist in which colors
+- [`ColorMatcher`](../docs/color.md) — `loadElements` / `loadColors` (default part `3024`)
+- [`PlateCatalog`](../docs/packing.md) — which plate sizes exist in which colors
+
+Both are loaded once at startup by
+`backend/src/main/java/com/legopicturegenerator/infrastructure/CatalogProvider.java`;
+the server refuses to start without this file.
 
 ## Path
 
-Code expects `data/bricks.db` relative to the **project root** when you `make run`.
+Code expects `data/bricks.db` relative to the **repo root** (where `make dev`
+/ `make start` run). Override with the `LEGO_DB_PATH` environment variable.

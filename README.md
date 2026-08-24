@@ -1,57 +1,67 @@
-# LegoPictureGenerator
+# Lego Picture Generator
 
-Turns a photo into a LEGO-plate mosaic: downscale → match Rebrickable colors → optional plate packing → BOM + LEGO-look renders.
+Turn any photo into a buildable LEGO mosaic — with a real parts list.
+
+Upload a PNG or JPEG in the local web UI (or run the CLI) and get back:
+
+- a stud-grid preview matched to real LEGO colors,
+- a packed build that uses larger plates (2×4, 6×6, …) instead of thousands of 1×1s,
+- a bill of materials (exact part numbers + colors to buy).
+
+Everything runs on your machine. No accounts, no cloud, no telemetry.
 
 ## Quick start
 
-From the project root (requires `data/bricks.db` and `lib/sqlite-jdbc-*.jar`):
+Prerequisites: Java 21+, Node 20+, and `data/bricks.db` (see
+[`data/README.md`](data/README.md)). Maven is downloaded automatically by the
+wrapper.
 
 ```bash
-make        # compile
-make run    # compile + run Image/loadImage
-make clean  # remove .class files
+make setup    # resolve backend deps + npm install
+make start    # build everything, serve UI + API on http://127.0.0.1:8080
 ```
 
-Input PNGs live in `Image/resources/`. All generated files go to `artifacts/`.
+Open http://127.0.0.1:8080, drop in a photo, pick sizing / pack mode, done.
 
-## Pipeline
+For development with hot reload:
 
-```text
-Image/resources/*.png
-        │
-        ▼
-   Image/loadImage          MergePixels → ReScale (BLOCK_SIZE)
-        │
-        ▼
-   Color/colorMatch         nearest opaque 3024 color per stud
-        │
-        ├─► pieceCount      1×1 color tally
-        │
-        ├─► Pack/           six packing modes → BOM + compare
-        │
-        └─► legoRender      flat + packed LEGO-look PNGs
-                │
-                ▼
-           artifacts/
+```bash
+make dev                  # terminal 1: Java API on :8080
+cd web && npm run dev     # terminal 2: Vite dev server on :5173 (proxies /api)
 ```
 
-## Project sections
+Other targets: `make test` (backend tests + frontend type-check),
+`make cli` (offline run on a sample image), `make clean`.
 
-| Folder | Role | Docs |
-|--------|------|------|
-| [`Color/`](Color/) | SQLite palette + nearest-color match | [README](Color/README.md) |
-| [`Image/`](Image/) | Main entry, downscale, piece counts, 2D render | [README](Image/README.md) |
-| [`Pack/`](Pack/) | Plate catalog, six packers, BOM compare | [README](Pack/README.md) · [walkthrough](Pack/ALGORITHM_WALKTHROUGH.md) |
-| [`artifacts/`](artifacts/) | Generated outputs (gitignored contents) | [README](artifacts/README.md) |
-| [`data/`](data/) | Rebrickable SQLite DB (`bricks.db`) | [README](data/README.md) |
-| [`lib/`](lib/) | JDBC driver JAR | [README](lib/README.md) |
+## Repository layout
 
-## Requirements
+| Path | What lives there |
+|---|---|
+| `backend/` | Java 21 Maven project: pipeline engine, job system, HTTP API, CLI ([README](backend/README.md)) |
+| `web/` | React + TypeScript + Vite frontend ([README](web/README.md)) |
+| `docs/` | Architecture, API reference, and algorithm deep-dives |
+| `data/` | `bricks.db` SQLite catalog (not committed; [how to get it](data/README.md)) |
+| `samples/` | Example input images |
+| `runtime/` | Per-job uploads and outputs (gitignored, safe to delete) |
 
-- Java (javac/java on `PATH`)
-- [`data/bricks.db`](data/README.md) from [rebrickable-sqlite](https://github.com/jncraton/rebrickable-sqlite) (or equivalent schema)
-- [`lib/sqlite-jdbc-3.53.2.0.jar`](lib/README.md)
+## Documentation
+
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) — system diagrams: layers, jobs, pipeline, storage
+- [`docs/architecture.md`](docs/architecture.md) — ops detail: safety, retention, config
+- [`docs/api.md`](docs/api.md) — HTTP API reference with curl examples
+- [`docs/image.md`](docs/image.md) — image sampling and rendering
+- [`docs/color.md`](docs/color.md) — LEGO color matching
+- [`docs/packing.md`](docs/packing.md) — packing overview + research papers
+- [`docs/algorithm-walkthrough.md`](docs/algorithm-walkthrough.md) — all six packing algorithms, step by step
+- [`docs/MATH.md`](docs/MATH.md) — formula index (sampling, color, sizing, packing)
+
+## How it works (30 seconds)
+
+1. **Sample** — the photo is box-averaged down to a stud grid (classic: block size 80; or aim for a stud/piece target).
+2. **Match** — every stud is matched to the nearest real LEGO color available as a 1×1 plate (Euclidean RGB over the `bricks.db` catalog).
+3. **Pack** — same-color regions are tiled with the largest available plates. Six algorithms are implemented (greedy, ILP, RLE, component, DLX, anneal); piece-aim sizing always uses DLX with a multi-probe search.
+4. **Render + BOM** — packed previews are drawn with stud texture and plate outlines, and the parts list is aggregated per (part, color).
 
 ## License
 
-See [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
