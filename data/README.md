@@ -16,7 +16,7 @@ Build or download via [rebrickable-sqlite](https://github.com/jncraton/rebrickab
 |-------|----------|
 | `colors` | `id`, `name`, `rgb`, `is_trans` — palette for matching |
 | `elements` | `part_num` + `color_id` — which colors exist for a part |
-| `parts` | Optional / tooling (e.g. verifying plate names) |
+| `parts` | Present in rebrickable dumps; not queried by current Java code |
 
 ### Callers
 

@@ -32,7 +32,8 @@ ASCII diagrams only (no Mermaid) so they show correctly in the editor.
       │
       ▼
   colorMatch  ──────────────────────►  flat mosaic PNG
-      │                                 (output_lego.png)
+      │                                 (artifacts/output.png)
+      │                                 + renderStuds → output_lego.png
       ▼
   studs[][]  (READ ONLY — never rewritten)
       │
@@ -631,8 +632,9 @@ Each mode returns a `PackResult` → BOM text + packed PNG. Wiring, status strin
 |----------|--------|
 | `bom_{mode}.txt` | Per-mode shopping list |
 | `bom_compare.txt` | Piece count / time / deltas vs greedy |
-| `output_lego_{mode}.png` | Packed render |
-| `output_lego.png` | Flat 1×1 mosaic (no packing) |
+| `output_lego_{mode}.png` | Packed render (`legoRender.renderPacked`) |
+| `output.png` | Flat matched mosaic (1 pixel per stud; no packing) |
+| `output_lego.png` | `legoRender.renderStuds` — every stud as a 1×1 plate + knob |
 
 ---
 
