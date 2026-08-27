@@ -1,7 +1,8 @@
 # Architecture
 
-Local-first LEGO mosaic app: a **Java** backend owns all processing and the HTTP API;
-a **React** SPA is the UI. Everything runs on your machine (`127.0.0.1`).
+Local-first LEGO mosaic app: a **C++** host owns the HTTP API, job system,
+catalog, and mosaic engine (`native/`); a **React** SPA is the UI. Everything
+runs on your machine (`127.0.0.1`).
 
 Deeper ops notes (safety table, retention, env vars): [`docs/architecture.md`](docs/architecture.md).  
 HTTP contract: [`docs/api.md`](docs/api.md).
@@ -14,23 +15,25 @@ HTTP contract: [`docs/api.md`](docs/api.md).
 flowchart LR
   subgraph machine["Your machine"]
     Browser["Browser<br/>React SPA"]
-    API["Javalin API<br/>127.0.0.1:8080"]
+    API["C++ HTTP API<br/>127.0.0.1:8080"]
     Jobs["JobService<br/>queue + worker"]
-    Pipe["PipelineService"]
+    Pipe["runPipeline"]
+    Native["C++ engine<br/>sample · match · pack · render"]
     DB[("data/bricks.db")]
     Disk[("runtime/jobs/&lt;uuid&gt;/")]
 
     Browser -->|"POST /api/v1/jobs<br/>GET status / artifacts"| API
     API --> Jobs
     Jobs --> Pipe
+    Pipe --> Native
     Pipe -->|palette + plates| DB
     Pipe -->|input + PNGs + BOM| Disk
     API -->|serve artifacts| Disk
   end
 ```
 
-Production (`make start`): one Java process serves both `/api/*` and the built `web/dist` UI.  
-Development: Vite on `:5173` proxies `/api` → the Java backend on `:8080`.
+Production (`make start`): one C++ process serves both `/api/*` and the built `web/dist` UI.  
+Development: Vite on `:5173` proxies `/api` → `lego_server` on `:8080`.
 
 ---
 
@@ -39,7 +42,7 @@ Development: Vite on `:5173` proxies `/api` → the Java backend on `:8080`.
 ```mermaid
 flowchart TB
   root["LegoPictureGenerator/"]
-  root --> backend["backend/<br/>Java 21 · Maven · engine + API + CLI"]
+  root --> native["native/<br/>C++17 · API + CLI + engine"]
   root --> web["web/<br/>React · TypeScript · Vite"]
   root --> docs["docs/<br/>API, packing, algorithms"]
   root --> data["data/<br/>bricks.db catalog"]
@@ -49,7 +52,7 @@ flowchart TB
 
 | Path | Role |
 |------|------|
-| `backend/` | Pipeline, packers, job system, Javalin API, CLI |
+| `native/` | HTTP host, jobs, CLI, mosaic engine (see [`docs/native.md`](docs/native.md)) |
 | `web/` | Upload UI, progress, previews, BOM table |
 | `docs/` | Long-form docs and algorithm walkthroughs |
 | `data/bricks.db` | Rebrickable-derived color + part availability |
@@ -57,40 +60,40 @@ flowchart TB
 
 ---
 
-## Backend layers
+## Host layers
 
 Dependencies point **downward only**. HTTP never lives inside packing math; the CLI reuses the same pipeline.
 
 ```mermaid
 flowchart TB
   subgraph entry["Entry points"]
-    App["Application<br/>web server"]
-    Cli["CliApplication<br/>offline"]
+    App["lego_server"]
+    Cli["lego_cli"]
   end
 
-  subgraph api_layer["api"]
-    Routes["JobRoutes"]
-    Upload["UploadValidator"]
+  subgraph api_layer["http"]
+    Routes["http_server"]
+    Upload["upload_validator"]
   end
 
-  subgraph app_layer["application"]
+  subgraph app_layer["jobs + pipeline"]
     JobSvc["JobService"]
-    PipeSvc["PipelineService"]
+    PipeSvc["runPipeline"]
   end
 
   subgraph infra["infrastructure"]
-    Catalog["CatalogProvider"]
+    Catalog["loadCatalog"]
     Repo["FileJobRepository"]
   end
 
-  subgraph domain_layer["domain"]
-    Types["JobConfig · JobStatus · PackMode<br/>JobManifest · PipelineResult"]
+  subgraph domain_layer["types"]
+    Types["JobConfig · JobManifest · PipelineResult"]
   end
 
-  subgraph core_layer["core — pure algorithms"]
-    Image["image: ImageSampler, LegoRenderer"]
-    Color["color: ColorMatcher"]
-    Pack["pack: GreedyPacker, ExactIlpPacker, …"]
+  subgraph engine["engine"]
+    Image["image_sampler · renderer"]
+    Color["color_matcher"]
+    Pack["packers"]
   end
 
   App --> Routes
@@ -112,14 +115,15 @@ flowchart TB
   Repo --> Types
 ```
 
-| Package | Responsibility |
+| Unit | Responsibility |
 |---------|----------------|
-| `api` | HTTP routes, upload validation, JSON responses |
-| `application` | Job queue/timeouts; one full mosaic run |
-| `infrastructure` | Load `bricks.db` once; job folders + manifests |
-| `domain` | Shared types (no I/O) |
-| `core.*` | Sampling, color match, pack, render |
-| `cli` | Same `PipelineService`, no server |
+| `http_server` | Routes, Host check, JSON errors, SPA files |
+| `JobService` | Queue, timeouts, piece-target search |
+| `runPipeline` | One full mosaic run + artifact writes |
+| `FileJobRepository` | Job folders + atomic manifests + retention |
+| `loadCatalog` | Palette + plate footprints from `bricks.db` |
+| `image_sampler` / `color_matcher` / `packers` / `renderer` | Engine (same logic as the original Java) |
+| `lego_cli` | Same pipeline, no server |
 
 ---
 
@@ -128,9 +132,9 @@ flowchart TB
 ```mermaid
 sequenceDiagram
   participant UI as React UI
-  participant API as JobRoutes
+  participant API as http_server
   participant JS as JobService
-  participant PS as PipelineService
+  participant PS as runPipeline
   participant FS as runtime/jobs/uuid
 
   UI->>API: POST /api/v1/jobs (multipart image)
@@ -144,7 +148,7 @@ sequenceDiagram
     API-->>UI: status (+ result when done)
   end
 
-  JS->>PS: run(JobConfig)
+  JS->>PS: runPipeline(cfg)
   PS->>FS: matched.png, lego-*.png, bom-*.txt, …
   PS-->>JS: PipelineResult
   JS->>FS: update manifest.json → COMPLETE
@@ -209,18 +213,18 @@ Web UI defaults to **greedy**; compare-all and other modes are selectable. **Aim
 ```mermaid
 flowchart TB
   subgraph web_path["Website"]
-    W1["Browser upload"] --> W2["JobRoutes + JobService"]
-    W2 --> W3["PipelineService"]
+    W1["Browser upload"] --> W2["http_server + JobService"]
+    W2 --> W3["runPipeline"]
     W3 --> W4["runtime/jobs/&lt;uuid&gt;/"]
   end
 
   subgraph cli_path["CLI · make cli"]
-    C1["CliApplication args"] --> C3["PipelineService"]
+    C1["lego_cli args"] --> C3["runPipeline"]
     C3 --> C4["runtime/cli/ or custom dir"]
   end
 ```
 
-Same engine (`PipelineService` + `core.*`). The website adds validation, a queue, polling, and artifact URLs.
+Same engine (`runPipeline` + packers). The website adds validation, a queue, polling, and artifact URLs.
 
 ---
 
@@ -246,13 +250,14 @@ runtime/jobs/<uuid>/
 
 | Goal | Start here |
 |------|------------|
-| HTTP / upload rules | `backend/.../api/JobRoutes.java`, `UploadValidator.java` |
-| Queue / timeout | `backend/.../application/JobService.java` |
-| Mosaic steps | `backend/.../application/PipelineService.java` |
-| Block size default | `domain/JobConfig.DEFAULT_BLOCK_SIZE` |
-| Color matching | `core/color/ColorMatcher.java` |
-| Packing | `core/pack/*Packer.java` |
-| Preview look | `core/image/LegoRenderer.java` |
+| HTTP / upload rules | `native/src/http_server.cpp`, `upload_validator.cpp` |
+| Queue / timeout | `native/src/jobs.cpp` |
+| Mosaic steps | `native/src/pipeline.cpp` |
+| Engine / CUDA next | `native/` · [`docs/native.md`](docs/native.md) |
+| Block size default | `native/include/lego/types.hpp` |
+| Color matching | `native/src/color_matcher.cpp` + `catalog.cpp` |
+| Packing | `native/src/packers.cpp` |
+| Preview look | `native/src/renderer.cpp` |
 | UI pages | `web/src/pages/`, `web/src/styles/app.css` |
 
 ---
@@ -264,4 +269,4 @@ runtime/jobs/<uuid>/
 - [`docs/api.md`](docs/api.md) — endpoints
 - [`docs/image.md`](docs/image.md) · [`docs/color.md`](docs/color.md) · [`docs/packing.md`](docs/packing.md)
 - [`docs/MATH.md`](docs/MATH.md) — formula index (sampling, color, sizing, packing)
-- [`backend/README.md`](backend/README.md) · [`web/README.md`](web/README.md)
+- [`docs/native.md`](docs/native.md) — C++ engine and host

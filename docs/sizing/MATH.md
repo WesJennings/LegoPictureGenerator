@@ -66,8 +66,8 @@ smallest `|P − N|`.
 Run the full pipeline once with the winning `B` and DLX (render + BOM).
 Final `P` can differ slightly from the best probe.
 
-**Code:** `PieceTargetSolver`, `PipelineService.probePieceCount`,
-`JobService.resolvePieceTarget`.
+**Code:** `solvePieceTarget`, `probePieceCount`,
+`JobService::resolveSizing` (`native/src/piece_target.cpp`, `pipeline.cpp`, `jobs.cpp`).
 
 **Assumptions:** more studs usually ⇒ more pieces (used for search direction),
 but packing can violate monotonicity. DLX may time out and fall back to greedy

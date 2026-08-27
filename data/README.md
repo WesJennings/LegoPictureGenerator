@@ -23,8 +23,7 @@ Build or download via [rebrickable-sqlite](https://github.com/jncraton/rebrickab
 - [`ColorMatcher`](../docs/color.md) — `loadElements` / `loadColors` (default part `3024`)
 - [`PlateCatalog`](../docs/packing.md) — which plate sizes exist in which colors
 
-Both are loaded once at startup by
-`backend/src/main/java/com/legopicturegenerator/infrastructure/CatalogProvider.java`;
+Both are loaded once at startup by `native/src/catalog.cpp`;
 the server refuses to start without this file.
 
 ## Path

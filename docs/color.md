@@ -8,31 +8,31 @@ See also: [color/MATH.md](color/MATH.md).
 
 | File | Role |
 |------|------|
-| `ColorMatcher.java` | Load palette from DB, nearest-color match, fill stud grid + optional tallies |
+| `catalog.cpp` | Load palette from SQLite |
+| `color_matcher.cpp` | Euclidean nearest-color match |
 
 ## What it does
 
-1. **`loadElements(dbPath, partNum)`** — loads opaque `(part_num, color_id)` rows joined to `colors` (RGB + name). Default part is **`3024`** (Plate 1×1). Skips transparent colors and `color_id < 0`.
-2. **`nearest(argb, palette)`** — Euclidean RGB distance to pick the closest element.
+1. **`loadCatalog(dbPath)`** — loads opaque `(part_num, color_id)` rows joined to `colors` (RGB + name) for part **`3024`** (Plate 1×1). Skips transparent colors and `color_id < 0`.
+2. **`nearestIndex(argb, palette)`** — Euclidean RGB distance to pick the closest element.
 3. **`matchImage(...)`** — for each pixel of the stud mosaic:
-   - writes the matched RGB back into the image
-   - fills `LegoElement[][] studs` (same dimensions)
-   - optionally tallies `colorId → count` and one sample element per color
+   - writes the matched RGB back into a buffer
+   - fills a `StudGrid` of `LegoElement` (same dimensions)
+   - tallies `colorId → count` and one sample element per color
 
-The stud grid is what the [packers](packing.md) and packed renders consume. The flat image is what [`LegoRenderer.renderStuds`](image.md) uses.
+The stud grid is what the [packers](packing.md) and packed renders consume. The flat image is what `renderStuds` uses.
 
 ## Types
 
-- **`LegoColor`** — palette row from `colors` (`id`, `name`, `rgbHex`, `r/g/b`, `isTrans`).
 - **`LegoElement`** — concrete part+color (`partNum`, `colorId`, `colorName`, `rgbHex`, `toArgb()`).
 
 ## Location & dependencies
 
-- Class: `backend/src/main/java/com/legopicturegenerator/core/color/ColorMatcher.java`
-- SQLite JDBC driver comes from Maven (`org.xerial:sqlite-jdbc`)
+- `native/src/catalog.cpp`, `native/src/color_matcher.cpp`
+- SQLite 3 (`libsqlite3-dev`), parameterized queries, DB opened read-only
 - Database at [`data/bricks.db`](../data/) (tables `elements`, `colors`), loaded
-  once at startup by `CatalogProvider`
-- Covered by `PipelineServiceTest`, which runs the matcher against an in-test
+  once at startup
+- Covered by `lego_host_tests`, which runs the matcher against an in-test
   SQLite fixture
 
 ## Notes
