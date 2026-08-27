@@ -1,7 +1,8 @@
 # Architecture
 
-Local-first LEGO mosaic app: a **Java** backend owns all processing and the HTTP API;
-a **React** SPA is the UI. Everything runs on your machine (`127.0.0.1`).
+Local-first LEGO mosaic app: a **Java** host owns the HTTP API and job system;
+a **C++** engine (`native/`, JNI) runs sampling, matching, packing, and
+rendering; a **React** SPA is the UI. Everything runs on your machine (`127.0.0.1`).
 
 Deeper ops notes (safety table, retention, env vars): [`docs/architecture.md`](docs/architecture.md).  
 HTTP contract: [`docs/api.md`](docs/api.md).
@@ -17,12 +18,14 @@ flowchart LR
     API["Javalin API<br/>127.0.0.1:8080"]
     Jobs["JobService<br/>queue + worker"]
     Pipe["PipelineService"]
+    Native["C++ engine<br/>JNI liblegocore"]
     DB[("data/bricks.db")]
     Disk[("runtime/jobs/&lt;uuid&gt;/")]
 
     Browser -->|"POST /api/v1/jobs<br/>GET status / artifacts"| API
     API --> Jobs
     Jobs --> Pipe
+    Pipe --> Native
     Pipe -->|palette + plates| DB
     Pipe -->|input + PNGs + BOM| Disk
     API -->|serve artifacts| Disk
@@ -39,7 +42,8 @@ Development: Vite on `:5173` proxies `/api` → the Java backend on `:8080`.
 ```mermaid
 flowchart TB
   root["LegoPictureGenerator/"]
-  root --> backend["backend/<br/>Java 21 · Maven · engine + API + CLI"]
+  root --> backend["backend/<br/>Java 21 · Maven · API + CLI + JNI"]
+  root --> native["native/<br/>C++17 · sample/match/pack/render"]
   root --> web["web/<br/>React · TypeScript · Vite"]
   root --> docs["docs/<br/>API, packing, algorithms"]
   root --> data["data/<br/>bricks.db catalog"]
@@ -49,7 +53,8 @@ flowchart TB
 
 | Path | Role |
 |------|------|
-| `backend/` | Pipeline, packers, job system, Javalin API, CLI |
+| `backend/` | Job system, Javalin API, CLI, JNI wrappers around the engine |
+| `native/` | C++ mosaic engine (see [`docs/native.md`](docs/native.md)) |
 | `web/` | Upload UI, progress, previews, BOM table |
 | `docs/` | Long-form docs and algorithm walkthroughs |
 | `data/bricks.db` | Rebrickable-derived color + part availability |
@@ -87,10 +92,15 @@ flowchart TB
     Types["JobConfig · JobStatus · PackMode<br/>JobManifest · PipelineResult"]
   end
 
-  subgraph core_layer["core — pure algorithms"]
+  subgraph core_layer["core — JNI wrappers"]
     Image["image: ImageSampler, LegoRenderer"]
     Color["color: ColorMatcher"]
     Pack["pack: GreedyPacker, ExactIlpPacker, …"]
+    Native["nativeengine: NativeEngine"]
+  end
+
+  subgraph cpp["native/ C++"]
+    Cpp["liblegocore<br/>sample · match · pack · render"]
   end
 
   App --> Routes
@@ -107,6 +117,10 @@ flowchart TB
   PipeSvc --> Image
   PipeSvc --> Color
   PipeSvc --> Pack
+  Image --> Native
+  Color --> Native
+  Pack --> Native
+  Native --> Cpp
   JobSvc --> Types
   PipeSvc --> Types
   Repo --> Types
@@ -118,7 +132,9 @@ flowchart TB
 | `application` | Job queue/timeouts; one full mosaic run |
 | `infrastructure` | Load `bricks.db` once; job folders + manifests |
 | `domain` | Shared types (no I/O) |
-| `core.*` | Sampling, color match, pack, render |
+| `core.*` | Java wrappers: sampling, color match, pack, render |
+| `core.nativeengine` | JNI load + calls into `liblegocore` |
+| `native/` (C++) | Algorithm implementations — same logic as the original Java |
 | `cli` | Same `PipelineService`, no server |
 
 ---
@@ -249,6 +265,7 @@ runtime/jobs/<uuid>/
 | HTTP / upload rules | `backend/.../api/JobRoutes.java`, `UploadValidator.java` |
 | Queue / timeout | `backend/.../application/JobService.java` |
 | Mosaic steps | `backend/.../application/PipelineService.java` |
+| C++ engine / CUDA next | `native/` · [`docs/native.md`](docs/native.md) |
 | Block size default | `domain/JobConfig.DEFAULT_BLOCK_SIZE` |
 | Color matching | `core/color/ColorMatcher.java` |
 | Packing | `core/pack/*Packer.java` |
@@ -264,4 +281,4 @@ runtime/jobs/<uuid>/
 - [`docs/api.md`](docs/api.md) — endpoints
 - [`docs/image.md`](docs/image.md) · [`docs/color.md`](docs/color.md) · [`docs/packing.md`](docs/packing.md)
 - [`docs/MATH.md`](docs/MATH.md) — formula index (sampling, color, sizing, packing)
-- [`backend/README.md`](backend/README.md) · [`web/README.md`](web/README.md)
+- [`docs/native.md`](docs/native.md) — C++ engine and JNI

@@ -5,6 +5,7 @@ import com.legopicturegenerator.api.UploadValidator;
 import com.legopicturegenerator.application.JobService;
 import com.legopicturegenerator.application.PipelineService;
 import com.legopicturegenerator.config.AppConfig;
+import com.legopicturegenerator.core.nativeengine.NativeEngine;
 import com.legopicturegenerator.infrastructure.CatalogProvider;
 import com.legopicturegenerator.infrastructure.FileJobRepository;
 import io.javalin.Javalin;
@@ -23,6 +24,7 @@ public final class Application {
   private static final Path WEB_DIST = Path.of("web/dist");
 
   public static void main(String[] args) throws Exception {
+    NativeEngine.ensureLoaded();
     AppConfig config = AppConfig.fromEnvironment();
 
     CatalogProvider catalogs = new CatalogProvider(config.dbPath());

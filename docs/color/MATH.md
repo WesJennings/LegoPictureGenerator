@@ -16,7 +16,7 @@ di² = (r − ri)² + (g − gi)² + (b − bi)²
 Choose the palette index with the smallest `di²` (squared Euclidean RGB). Ties
 keep the first minimum found while scanning the palette.
 
-**Code:** `ColorMatcher.nearest`.
+**Code:** `ColorMatcher.nearest` → C++ `lego::nearestIndex` (`native/src/color_matcher.cpp`).
 
 **Assumptions:** matching is in sRGB channel space, not a perceptual
 uniform space (CIELAB / redmean). Transparent and unknown colors are excluded

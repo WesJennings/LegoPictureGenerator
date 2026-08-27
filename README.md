@@ -12,9 +12,10 @@ Everything runs on your machine. No accounts, no cloud, no telemetry.
 
 ## Quick start
 
-Prerequisites: Java 21+, Node 20+, and `data/bricks.db` (see
+Prerequisites: Java 21+, a C++17 compiler + CMake, Node 20+, and `data/bricks.db` (see
 [`data/README.md`](data/README.md)). Maven is downloaded automatically by the
-wrapper.
+wrapper. The mosaic engine (sample / match / pack / render) is C++ behind JNI;
+see [`docs/native.md`](docs/native.md).
 
 ```bash
 make setup    # resolve backend deps + npm install
@@ -37,7 +38,8 @@ Other targets: `make test` (backend tests + frontend type-check),
 
 | Path | What lives there |
 |---|---|
-| `backend/` | Java 21 Maven project: pipeline engine, job system, HTTP API, CLI ([README](backend/README.md)) |
+| `backend/` | Java 21 Maven host: job system, HTTP API, CLI, JNI wrappers ([README](backend/README.md)) |
+| `native/` | C++ engine: sampling, color match, six packers, renderer ([docs/native.md](docs/native.md)) |
 | `web/` | React + TypeScript + Vite frontend ([README](web/README.md)) |
 | `docs/` | Architecture, API reference, and algorithm deep-dives |
 | `data/` | `bricks.db` SQLite catalog (not committed; [how to get it](data/README.md)) |
@@ -47,6 +49,7 @@ Other targets: `make test` (backend tests + frontend type-check),
 ## Documentation
 
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — system diagrams: layers, jobs, pipeline, storage
+- [`docs/native.md`](docs/native.md) — C++ engine, JNI, CUDA next steps
 - [`docs/architecture.md`](docs/architecture.md) — ops detail: safety, retention, config
 - [`docs/api.md`](docs/api.md) — HTTP API reference with curl examples
 - [`docs/image.md`](docs/image.md) — image sampling and rendering

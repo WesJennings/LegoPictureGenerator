@@ -18,7 +18,8 @@ G = w · h
 Each output stud averages the RGB of its `B × B` source block. Right/bottom
 remainder pixels that do not fill a full block are dropped.
 
-**Code:** `ImageSampler.toStudGridByBlockSize`, `ImageSampler.studCountFor`.
+**Code:** `ImageSampler.toStudGridByBlockSize`, `ImageSampler.studCountFor`
+(JNI → `native/src/image_sampler.cpp`).
 
 **Defaults:** CLI / block-size jobs often use `B = 80` (`JobConfig.DEFAULT_BLOCK_SIZE`).
 Valid range: `B ∈ [8, 256]`. Web Classic instead uses stud-width sampling
@@ -38,7 +39,7 @@ B0 = round( √(P / G*) )
 3. Local search over `B ∈ [B0−4, B0+4]` (still clamped); pick the `B` that
    minimizes `|G(B) − G*|`, breaking ties toward smaller `B`.
 
-**Code:** `ImageSampler.blockSizeForTargetStuds`.
+**Code:** `ImageSampler.blockSizeForTargetStuds` (JNI → C++).
 
 **Assumptions:** aspect ratio is fixed by the source; exact `G*` is often
 impossible because `w` and `h` are integers.

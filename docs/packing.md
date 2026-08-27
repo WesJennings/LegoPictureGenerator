@@ -2,7 +2,7 @@
 
 This folder turns a **stud grid of matched LEGO colors** into a **list of physical plates** that cover every stud exactly once. Goal: fewer pieces to buy, using only parts that exist in that color in `data/bricks.db`.
 
-The stud grid is **never modified**. Packers only **read** `studs` and emit `List<PlacedPart>`.
+The stud grid is **never modified**. Packers only **read** `studs` and emit `List<PlacedPart>`. Implementations are C++ (`native/src/packers.cpp`) with the same control flow as the original Java; Java packer classes are JNI wrappers. See [native.md](native.md).
 
 **Docs split:** this README is the high-level map (types, wiring, BOM, research). Step-by-step algorithm explanations live only in [`ALGORITHM_WALKTHROUGH.md`](algorithm-walkthrough.md). Formulas: [`packing/MATH.md`](packing/MATH.md).
 

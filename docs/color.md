@@ -8,7 +8,7 @@ See also: [color/MATH.md](color/MATH.md).
 
 | File | Role |
 |------|------|
-| `ColorMatcher.java` | Load palette from DB, nearest-color match, fill stud grid + optional tallies |
+| `ColorMatcher.java` | Load palette from DB (Java/JDBC); nearest-color match in C++ |
 
 ## What it does
 

@@ -1,5 +1,6 @@
 package com.legopicturegenerator.core.color;
 
+import com.legopicturegenerator.core.nativeengine.NativeEngine;
 import java.awt.image.BufferedImage;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -84,27 +85,20 @@ public class ColorMatcher {
     return v.equalsIgnoreCase("t") || v.equalsIgnoreCase("true");
   }
 
-  /** Nearest element by RGB Euclidean distance. */
+  /** Nearest element by RGB Euclidean distance (C++ engine). */
   public static LegoElement nearest(int argb, List<LegoElement> palette) {
-    int r = (argb >>> 16) & 0xFF;
-    int g = (argb >>> 8) & 0xFF;
-    int b = argb & 0xFF;
-
-    LegoElement best = palette.get(0);
-    long bestDist = Long.MAX_VALUE;
-
-    for (LegoElement el : palette) {
-      long dr = r - el.r;
-      long dg = g - el.g;
-      long db = b - el.b;
-      long dist = dr * dr + dg * dg + db * db;
-      if (dist < bestDist) {
-        bestDist = dist;
-        best = el;
-      }
+    NativeEngine.ensureLoaded();
+    int[] palR = new int[palette.size()];
+    int[] palG = new int[palette.size()];
+    int[] palB = new int[palette.size()];
+    for (int i = 0; i < palette.size(); i++) {
+      palR[i] = palette.get(i).r;
+      palG[i] = palette.get(i).g;
+      palB[i] = palette.get(i).b;
     }
-
-    return best;
+    int[] matched = new int[1];
+    int[] idx = NativeEngine.matchIndices(new int[] {argb}, 1, 1, palR, palG, palB, matched);
+    return palette.get(idx[0]);
   }
 
   /**
@@ -132,15 +126,29 @@ public class ColorMatcher {
       Map<Integer, Integer> colorCountsOut,
       Map<Integer, LegoElement> colorSamplesOut) {
 
+    NativeEngine.ensureLoaded();
     int width = studs.getWidth();
     int height = studs.getHeight();
+    int[] grid = studs.getRGB(0, 0, width, height, null, 0, width);
+    int[] palR = new int[palette.size()];
+    int[] palG = new int[palette.size()];
+    int[] palB = new int[palette.size()];
+    for (int i = 0; i < palette.size(); i++) {
+      palR[i] = palette.get(i).r;
+      palG[i] = palette.get(i).g;
+      palB[i] = palette.get(i).b;
+    }
+    int[] matched = new int[width * height];
+    int[] indices = NativeEngine.matchIndices(
+        grid, width, height, palR, palG, palB, matched);
+
     BufferedImage output =
         new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+    output.setRGB(0, 0, width, height, matched, 0, width);
 
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
-        LegoElement el = nearest(studs.getRGB(x, y), palette);
-        output.setRGB(x, y, el.toArgb());
+        LegoElement el = palette.get(indices[y * width + x]);
         if (elementsOut != null) {
           elementsOut[y][x] = el;
         }

@@ -20,6 +20,12 @@ replay_pid*
 # Backend build output
 backend/target/
 
+# Native engine build
+native/build/
+backend/src/main/resources/native/*.so
+backend/src/main/resources/native/*.dylib
+backend/src/main/resources/native/*.dll
+
 # Frontend build output and dependencies
 web/node_modules/
 web/dist/

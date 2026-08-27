@@ -27,7 +27,7 @@ plain `fetch`. One process, one port, everything on `127.0.0.1`.
 
 | Package | Responsibility | Depends on |
 |---|---|---|
-| `core.color`, `core.image`, `core.pack` | Pure algorithms: color matching, sampling, rendering, packing. No HTTP, no job knowledge. | nothing above it |
+| `core.color`, `core.image`, `core.pack` | JNI wrappers for the C++ engine (same algorithm logic). No HTTP, no job knowledge. | `nativeengine` → `liblegocore` |
 | `domain` | Types: `JobConfig`, `JobStatus`, `PackMode`, `JobManifest`, `PipelineResult` | core |
 | `application` | `PipelineService` (one full run), `JobService` (queue, worker, timeout) | domain, core |
 | `infrastructure` | `CatalogProvider` (bricks.db, loaded once), `FileJobRepository` (job dirs + manifests) | domain |
@@ -45,8 +45,8 @@ the tests drive the exact same engine.
 1. **PREPROCESSING** — decode the (already validated) input, then box-average
    each `blockSize × blockSize` pixel block into one stud (`ImageSampler`,
    default `blockSize = 80`, same as the old CLI `BLOCK_SIZE`).
-2. **MATCHING** — nearest LEGO color per stud via redmean distance
-   (`ColorMatcher`), against the palette of colors that exist as 1×1 plates in
+2. **MATCHING** — nearest LEGO color per stud via Euclidean RGB distance
+   (`ColorMatcher` → C++), against the palette of colors that exist as 1×1 plates in
    `bricks.db`.
 3. **PACKING** — for each requested `PackMode`, tile same-color regions with
    catalog plates. See [`packing.md`](packing.md) and

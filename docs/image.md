@@ -1,7 +1,9 @@
 # Image sampling & rendering
 
 How a photo becomes a stud grid, and how results are drawn to look like LEGO.
-Classes live in `backend/src/main/java/com/legopicturegenerator/core/image/`.
+Java adapters live in `backend/src/main/java/com/legopicturegenerator/core/image/`;
+the averaging and drawing loops are C++ (`native/src/image_sampler.cpp`,
+`native/src/renderer.cpp`). See [native.md](native.md).
 
 See also: [sampling/MATH.md](sampling/MATH.md) · [sizing/MATH.md](sizing/MATH.md).
 

@@ -1,8 +1,8 @@
 # Lego Picture Generator — local website + CLI
 #
-#   make setup   - resolve backend deps + npm install
+#   make setup   - build C++ engine, resolve backend deps + npm install
 #   make dev     - run API (:8080) and Vite dev server (:5173)
-#   make test    - backend tests + frontend type-check/build
+#   make test    - native tests + backend tests + frontend type-check/build
 #   make build   - production build (web/dist + shaded backend JAR)
 #   make start   - single Java process serving API + built frontend
 #   make cli     - run the offline CLI on samples/Jarvis.png
@@ -12,6 +12,7 @@ MVNW = cd backend && ./mvnw
 .PHONY: setup dev test build start cli clean
 
 setup:
+	bash native/build.sh
 	$(MVNW) -q dependency:resolve
 	cd web && npm install
 
@@ -38,4 +39,5 @@ cli:
 
 clean:
 	$(MVNW) -q clean
-	rm -rf web/dist web/node_modules runtime
+	rm -rf web/dist web/node_modules runtime native/build
+	rm -f backend/src/main/resources/native/liblegocore.so

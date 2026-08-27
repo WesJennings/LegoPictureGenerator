@@ -1,7 +1,8 @@
 # Backend
 
-Java 21 Maven project containing the whole engine: image pipeline, packing
-algorithms, job system, HTTP API, and the offline CLI.
+Java 21 Maven host for the website: job system, HTTP API, CLI, and JNI
+wrappers around the C++ mosaic engine (`../native/`). Algorithm logic lives
+in C++; see [`../docs/native.md`](../docs/native.md).
 
 ## Build & run
 
@@ -32,14 +33,13 @@ com.legopicturegenerator
 ├── infrastructure/
 │   ├── CatalogProvider     # loads palette + plate catalog from bricks.db once
 │   └── FileJobRepository   # job dirs, atomic manifest writes, retention
-├── core/                   # pure algorithms — no HTTP, no jobs
-│   ├── color/ColorMatcher      # redmean nearest-color matching
-│   ├── image/ImageSampler      # box-average photo → stud grid
-│   ├── image/LegoRenderer      # stud-texture + packed previews
+├── core/                   # JNI wrappers — algorithms in native/
+│   ├── color/ColorMatcher      # JDBC load + JNI Euclidean nearest-color
+│   ├── image/ImageSampler      # JNI box-average photo → stud grid
+│   ├── image/LegoRenderer      # JNI stud-texture + packed previews
 │   ├── image/PieceCountFormatter
-│   └── pack/                   # GreedyPacker, ExactIlpPacker, RlePacker,
-│                               # ComponentGreedyPacker, DlxPacker, AnnealPacker,
-│                               # PlateCatalog, PackBom, PackCompare
+│   ├── nativeengine/NativeEngine
+│   └── pack/                   # JNI wrappers: GreedyPacker, ExactIlpPacker, …
 └── cli/CliApplication      # same pipeline without a server
 ```
 
@@ -63,6 +63,8 @@ comma-separated modes.
 
 ## Tests
 
+- `NativeParityTest` — C++ engine: sampling, matching, all six packers cover
+  a split grid, render dimensions
 - `ImageSamplerTest` — aspect ratio, clamping, full-coverage averaging
 - `UploadValidatorTest` — fake/truncated/oversized files rejected before decode
 - `PipelineServiceTest` — end-to-end run against a tiny in-test SQLite fixture;

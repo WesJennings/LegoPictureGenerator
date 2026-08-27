@@ -1,6 +1,7 @@
 package com.legopicturegenerator.cli;
 
 import com.legopicturegenerator.application.PipelineService;
+import com.legopicturegenerator.core.nativeengine.NativeEngine;
 import com.legopicturegenerator.domain.JobConfig;
 import com.legopicturegenerator.domain.PackMode;
 import com.legopicturegenerator.domain.PipelineResult;
@@ -18,6 +19,7 @@ import java.util.Set;
 public final class CliApplication {
 
   public static void main(String[] args) throws Exception {
+    NativeEngine.ensureLoaded();
     Path input = Path.of(args.length > 0 ? args[0] : "samples/Jarvis.png");
     Path outputDir = Path.of(args.length > 1 ? args[1] : "runtime/cli");
     int blockSize = args.length > 2
