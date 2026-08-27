@@ -2,7 +2,7 @@
 
 This folder turns a **stud grid of matched LEGO colors** into a **list of physical plates** that cover every stud exactly once. Goal: fewer pieces to buy, using only parts that exist in that color in `data/bricks.db`.
 
-The stud grid is **never modified**. Packers only **read** `studs` and emit `List<PlacedPart>`. Implementations are C++ (`native/src/packers.cpp`) with the same control flow as the original Java; Java packer classes are JNI wrappers. See [native.md](native.md).
+The stud grid is **never modified**. Packers only **read** `studs` and emit `PlacedPart` lists. Implementations are C++ (`native/src/packers.cpp`) with the same control flow as the original Java. See [native.md](native.md).
 
 **Docs split:** this README is the high-level map (types, wiring, BOM, research). Step-by-step algorithm explanations live only in [`ALGORITHM_WALKTHROUGH.md`](algorithm-walkthrough.md). Formulas: [`packing/MATH.md`](packing/MATH.md).
 
@@ -53,12 +53,12 @@ studs[][] ──► PlateCatalog ──► packers 1–6 ──► PackResult
 
 | File | Role |
 |------|------|
-| `PlateCatalog.java` | Allowed sizes + DB color filter; footprints largest-first |
-| `PlacedPart.java` / `PackResult.java` | One plate / one algorithm run |
-| `GreedyPacker.java` … `AnnealPacker.java` | Modes 1–6 (see walkthrough) |
-| `PackBom.java` / `PackCompare.java` | Shopping list + multi-mode compare |
+| `catalog.cpp` (`PlateCatalog`) | Allowed sizes + DB color filter; footprints largest-first |
+| `types.hpp` (`PlacedPart` / `PackResult`) | One plate / one algorithm run |
+| `packers.cpp` | Modes 1–6 (see walkthrough) |
+| `text.cpp` | Shopping-list BOM formatting |
 
-Algorithms depend on catalog + shared types; BOM/compare only need `PackResult`. Nothing in `core.pack` writes images (`LegoRenderer` in `core.image` does that). All classes live in `backend/src/main/java/com/legopicturegenerator/core/pack/`.
+Algorithms depend on catalog + shared types; BOM only needs `PackResult`. Packers do not write images (`renderer.cpp` does that).
 
 ---
 
@@ -114,7 +114,7 @@ Do not duplicate those walkthroughs here.
 **BOM** (`PackBom`): shopping counts by `(partNum, color)` — locations dropped.  
 **Compare** (`PackCompare.compareAll`): piece counts / times / deltas vs greedy.
 
-**Wiring** (`application/PipelineService.java`): build `PlateCatalog` once at startup (`CatalogProvider`) → run the requested packers → write `bom-<mode>.txt`, `placements-<mode>.json`, and packed `lego-<mode>.png` into the job's output directory. The web UI requests `greedy`; the CLI accepts any comma-separated mode list.
+**Wiring** (`native/src/pipeline.cpp`): load `PlateCatalog` once at startup (`loadCatalog`) → run the requested packers → write `bom-<mode>.txt`, `placements-<mode>.json`, and packed `lego-<mode>.png` into the job's output directory. The web UI requests `greedy`; the CLI accepts any comma-separated mode list.
 
 | Status | Meaning |
 |--------|---------|
@@ -123,17 +123,15 @@ Do not duplicate those walkthroughs here.
 | `optimal` | ILP/DLX: every blob solved without greedy fallback |
 | `exact_partial (...)` | Some blobs fell back (size > 64 and/or timeout) |
 
-`ilp` / `dlx` use `EXACT_CELL_LIMIT = 64` (Java `long` bitmasks). Large same-color regions are hybrids, not a full-image MIP.
+`ilp` / `dlx` use `EXACT_CELL_LIMIT = 64` (`uint64_t` bitmasks). Large same-color regions are hybrids, not a full-image MIP.
 
 ```text
 docs/
   packing.md                 ← high-level + research (this file)
   algorithm-walkthrough.md   ← algorithm explanations
-backend/src/main/java/com/legopicturegenerator/core/pack/
-  PlateCatalog.java, PlacedPart.java, PackResult.java
-  GreedyPacker.java, ExactIlpPacker.java, RlePacker.java,
-  ComponentGreedyPacker.java, DlxPacker.java, AnnealPacker.java
-  PackBom.java, PackCompare.java
+native/src/packers.cpp / native/include/lego/packers.hpp
+native/src/catalog.cpp       ← PlateCatalog + BASE sizes
+native/src/text.cpp          ← BOM formatting
 ```
 
 ---

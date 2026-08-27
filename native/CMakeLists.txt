@@ -9,38 +9,48 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-if(NOT DEFINED ENV{JAVA_HOME})
-  set(JAVA_HOME "/usr/lib/jvm/java-21-openjdk-amd64")
-else()
-  set(JAVA_HOME "$ENV{JAVA_HOME}")
-endif()
+find_package(SQLite3 REQUIRED)
+find_package(Threads REQUIRED)
 
-add_library(legocore SHARED
+set(LEGO_ENGINE_SRC
   src/image_sampler.cpp
   src/color_matcher.cpp
   src/packers.cpp
   src/renderer.cpp
-  src/jni_bridge.cpp
 )
 
-target_include_directories(legocore PRIVATE
+set(LEGO_HOST_SRC
+  src/catalog.cpp
+  src/image_io.cpp
+  src/text.cpp
+  src/piece_target.cpp
+  src/pipeline.cpp
+  src/jobs.cpp
+  src/upload_validator.cpp
+  src/config.cpp
+  src/http_server.cpp
+)
+
+add_library(legocore STATIC ${LEGO_ENGINE_SRC} ${LEGO_HOST_SRC})
+target_include_directories(legocore PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include
-  ${JAVA_HOME}/include
-  ${JAVA_HOME}/include/linux
-  ${JAVA_HOME}/include/darwin
-  ${JAVA_HOME}/include/win32
+  ${CMAKE_CURRENT_SOURCE_DIR}/third_party
 )
-
+target_link_libraries(legocore PUBLIC SQLite::SQLite3 Threads::Threads)
 if(UNIX AND NOT APPLE)
   target_compile_options(legocore PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter)
 endif()
 
-add_executable(lego_native_tests
-  src/image_sampler.cpp
-  src/color_matcher.cpp
-  src/packers.cpp
-  src/renderer.cpp
-  tests/native_tests.cpp
-)
-target_include_directories(lego_native_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+add_executable(lego_server src/server_main.cpp)
+target_link_libraries(lego_server PRIVATE legocore)
+
+add_executable(lego_cli src/cli_main.cpp)
+target_link_libraries(lego_cli PRIVATE legocore)
+
+add_executable(lego_native_tests tests/native_tests.cpp)
+target_link_libraries(lego_native_tests PRIVATE legocore)
 target_compile_options(lego_native_tests PRIVATE -O2)
+
+add_executable(lego_host_tests tests/host_tests.cpp)
+target_link_libraries(lego_host_tests PRIVATE legocore)
+target_compile_options(lego_host_tests PRIVATE -O2)

@@ -3,8 +3,7 @@
 ASCII diagrams only (no Mermaid) so they show correctly in the editor.
 
 The six algorithms below are implemented in C++ (`native/src/packers.cpp`) with
-the same control flow as the original Java. Java packer classes are JNI
-wrappers. See [native.md](native.md).
+the same control flow as the original Java. See [native.md](native.md).
 
 **Docs split:** algorithm explanations live **here**. High-level types, wiring, BOM, and research papers live in [`README.md`](packing.md). Formulas: [`packing/MATH.md`](packing/MATH.md).
 

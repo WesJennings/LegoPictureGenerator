@@ -1,43 +1,37 @@
 # Lego Picture Generator — local website + CLI
 #
-#   make setup   - build C++ engine, resolve backend deps + npm install
-#   make dev     - run API (:8080) and Vite dev server (:5173)
-#   make test    - native tests + backend tests + frontend type-check/build
-#   make build   - production build (web/dist + shaded backend JAR)
-#   make start   - single Java process serving API + built frontend
-#   make cli     - run the offline CLI on samples/Jarvis.png
-
-MVNW = cd backend && ./mvnw
+#   make setup   - build C++ host + engine, npm install
+#   make dev     - run API (:8080); start Vite separately for hot UI
+#   make test    - native + host tests + frontend type-check/build
+#   make build   - production web/dist + C++ binaries
+#   make start   - one C++ process serving API + built frontend
+#   make cli     - offline CLI on samples/Jarvis.png
 
 .PHONY: setup dev test build start cli clean
 
 setup:
 	bash native/build.sh
-	$(MVNW) -q dependency:resolve
 	cd web && npm install
 
 dev:
 	@echo "API on http://127.0.0.1:8080 — start 'cd web && npm run dev' in another terminal for the UI (http://localhost:5173)"
-	cd backend && LEGO_DB_PATH=../data/bricks.db LEGO_JOBS_PATH=../runtime/jobs \
-		./mvnw -q compile exec:java -Dexec.mainClass=com.legopicturegenerator.Application
+	LEGO_DB_PATH=data/bricks.db LEGO_JOBS_PATH=runtime/jobs \
+		./native/build/lego_server
 
 test:
-	$(MVNW) test
+	bash native/build.sh
 	cd web && npm run build
 
 build:
 	cd web && npm run build
-	$(MVNW) -q package -DskipTests
+	bash native/build.sh
 
 start: build
-	java -Xmx1g -jar backend/target/lego-picture-generator-0.1.0.jar
+	LEGO_DB_PATH=data/bricks.db LEGO_JOBS_PATH=runtime/jobs \
+		./native/build/lego_server
 
 cli:
-	cd backend && LEGO_DB_PATH=../data/bricks.db \
-		./mvnw -q compile exec:java -Dexec.mainClass=com.legopicturegenerator.cli.CliApplication \
-		-Dexec.args="../samples/Jarvis.png ../runtime/cli 80 greedy"
+	LEGO_DB_PATH=data/bricks.db ./native/build/lego_cli samples/Jarvis.png runtime/cli 80 greedy
 
 clean:
-	$(MVNW) -q clean
 	rm -rf web/dist web/node_modules runtime native/build
-	rm -f backend/src/main/resources/native/liblegocore.so

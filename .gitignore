@@ -17,14 +17,8 @@ replay_pid*
 # Database (see data/README.md for how to obtain bricks.db)
 *.db
 
-# Backend build output
-backend/target/
-
-# Native engine build
+# Native build
 native/build/
-backend/src/main/resources/native/*.so
-backend/src/main/resources/native/*.dylib
-backend/src/main/resources/native/*.dll
 
 # Frontend build output and dependencies
 web/node_modules/

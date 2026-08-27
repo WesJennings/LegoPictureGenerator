@@ -1,22 +1,21 @@
 # Image sampling & rendering
 
 How a photo becomes a stud grid, and how results are drawn to look like LEGO.
-Java adapters live in `backend/src/main/java/com/legopicturegenerator/core/image/`;
-the averaging and drawing loops are C++ (`native/src/image_sampler.cpp`,
+Averaging and drawing loops are C++ (`native/src/image_sampler.cpp`,
 `native/src/renderer.cpp`). See [native.md](native.md).
 
 See also: [sampling/MATH.md](sampling/MATH.md) · [sizing/MATH.md](sizing/MATH.md).
 
 ## Files
 
-| Class | Role |
+| File | Role |
 |------|------|
-| `ImageSampler` | Photo → stud grid (box averaging, aspect-preserving) |
-| `LegoRenderer` | Procedural stud / packed-plate PNGs (no file I/O) |
-| `PieceCountFormatter` | Format color tallies into a shopping-list report |
+| `image_sampler.cpp` | Photo → stud grid (box averaging, aspect-preserving) |
+| `renderer.cpp` | Procedural stud / packed-plate PNGs (no file I/O) |
+| `text.cpp` | Format color tallies into a shopping-list report |
 
 The pipeline that wires these together is
-`application/PipelineService.java`; per-job outputs land in
+`native/src/pipeline.cpp`; per-job outputs land in
 `runtime/jobs/<uuid>/` (web) or the directory you pass to the CLI.
 
 ## `ImageSampler`

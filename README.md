@@ -12,13 +12,12 @@ Everything runs on your machine. No accounts, no cloud, no telemetry.
 
 ## Quick start
 
-Prerequisites: Java 21+, a C++17 compiler + CMake, Node 20+, and `data/bricks.db` (see
-[`data/README.md`](data/README.md)). Maven is downloaded automatically by the
-wrapper. The mosaic engine (sample / match / pack / render) is C++ behind JNI;
-see [`docs/native.md`](docs/native.md).
+Prerequisites: a C++17 compiler + CMake, SQLite 3 (`libsqlite3-dev`), Node 20+,
+and `data/bricks.db` (see [`data/README.md`](data/README.md)). The mosaic
+engine, HTTP API, job system, and CLI are C++; see [`docs/native.md`](docs/native.md).
 
 ```bash
-make setup    # resolve backend deps + npm install
+make setup    # build C++ host + npm install
 make start    # build everything, serve UI + API on http://127.0.0.1:8080
 ```
 
@@ -27,19 +26,19 @@ Open http://127.0.0.1:8080, drop in a photo, pick sizing / pack mode, done.
 For development with hot reload:
 
 ```bash
-make dev                  # terminal 1: Java API on :8080
+make setup
+make dev                  # terminal 1: C++ API on :8080
 cd web && npm run dev     # terminal 2: Vite dev server on :5173 (proxies /api)
 ```
 
-Other targets: `make test` (backend tests + frontend type-check),
+Other targets: `make test` (C++ tests + frontend type-check),
 `make cli` (offline run on a sample image), `make clean`.
 
 ## Repository layout
 
 | Path | What lives there |
 |---|---|
-| `backend/` | Java 21 Maven host: job system, HTTP API, CLI, JNI wrappers ([README](backend/README.md)) |
-| `native/` | C++ engine: sampling, color match, six packers, renderer ([docs/native.md](docs/native.md)) |
+| `native/` | C++ engine + HTTP host + CLI ([docs/native.md](docs/native.md)) |
 | `web/` | React + TypeScript + Vite frontend ([README](web/README.md)) |
 | `docs/` | Architecture, API reference, and algorithm deep-dives |
 | `data/` | `bricks.db` SQLite catalog (not committed; [how to get it](data/README.md)) |
@@ -49,7 +48,7 @@ Other targets: `make test` (backend tests + frontend type-check),
 ## Documentation
 
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — system diagrams: layers, jobs, pipeline, storage
-- [`docs/native.md`](docs/native.md) — C++ engine, JNI, CUDA next steps
+- [`docs/native.md`](docs/native.md) — C++ engine and host, CUDA next steps
 - [`docs/architecture.md`](docs/architecture.md) — ops detail: safety, retention, config
 - [`docs/api.md`](docs/api.md) — HTTP API reference with curl examples
 - [`docs/image.md`](docs/image.md) — image sampling and rendering
@@ -60,7 +59,7 @@ Other targets: `make test` (backend tests + frontend type-check),
 
 ## How it works (30 seconds)
 
-1. **Sample** — the photo is box-averaged down to a stud grid (classic: block size 80; or aim for a stud/piece target).
+1. **Sample** — the photo is box-averaged down to a stud grid (classic: ~54 studs wide; or aim for a stud/piece target).
 2. **Match** — every stud is matched to the nearest real LEGO color available as a 1×1 plate (Euclidean RGB over the `bricks.db` catalog).
 3. **Pack** — same-color regions are tiled with the largest available plates. Six algorithms are implemented (greedy, ILP, RLE, component, DLX, anneal); piece-aim sizing always uses DLX with a multi-probe search.
 4. **Render + BOM** — packed previews are drawn with stud texture and plate outlines, and the parts list is aggregated per (part, color).

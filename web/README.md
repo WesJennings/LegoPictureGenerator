@@ -1,7 +1,7 @@
 # Web frontend
 
 React + TypeScript + Vite single-page app. Pure API client — all processing
-happens in the Java backend.
+happens in the C++ host (`lego_server`).
 
 ## Develop
 
@@ -10,8 +10,8 @@ npm install
 npm run dev     # http://localhost:5173, proxies /api → 127.0.0.1:8080
 ```
 
-Start the backend first (`make dev` at the repo root). The Vite proxy means no
-CORS configuration anywhere.
+Start the backend first (`make setup && make dev` at the repo root). The Vite
+proxy means no CORS configuration anywhere.
 
 ## Build
 
@@ -19,8 +19,8 @@ CORS configuration anywhere.
 npm run build   # type-checks, then emits dist/
 ```
 
-The backend serves `web/dist/` automatically when it exists, so after
-`make build` the whole app is one Java process on
+`lego_server` serves `web/dist/` automatically when it exists, so after
+`make build` the whole app is one C++ process on
 http://127.0.0.1:8080.
 
 ## Structure
@@ -46,4 +46,4 @@ src/
 ```
 
 Artifacts (preview PNGs, BOM downloads) are plain URLs returned by the job
-endpoint — the browser loads them directly from the backend.
+endpoint — the browser loads them directly from the host.
