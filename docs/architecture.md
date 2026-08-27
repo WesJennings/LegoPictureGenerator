@@ -17,9 +17,10 @@ plain `fetch`. One process, one port, everything on `127.0.0.1`.
 │    │ run                                                             │
 │    ▼                                                                 │
 │  PipelineService: sample → match → pack → render                     │
-│    │ reads                          │ writes                         │
+│    │ JNI                            │ writes                         │
 │    ▼                                ▼                                │
-│  data/bricks.db (read-only)      runtime/jobs/<uuid>/ (per job)      │
+│  C++ liblegocore                 runtime/jobs/<uuid>/                │
+│  data/bricks.db (Java catalog)                                       │
 └──────────────────────────────────────────────────────────────────────┘
 ```
 
