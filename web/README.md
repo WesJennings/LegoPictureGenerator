@@ -29,16 +29,20 @@ http://127.0.0.1:8080.
 src/
 ├── main.tsx            # router: / (create) and /jobs/:jobId (results)
 ├── App.tsx             # shell layout
+├── packModes.ts        # pack mode ids + compare-all → API `modes` string
 ├── api/
 │   ├── jobs.ts         # createJob / getJob fetch wrappers
 │   └── types.ts        # mirrors the backend JSON contract (docs/api.md)
 ├── pages/
-│   ├── CreateJobPage   # dropzone + width slider + submit
+│   ├── CreateJobPage   # dropzone + sizing + pack mode + stud-BOM toggle
 │   └── JobPage         # 750ms polling until COMPLETE/FAILED, then results
 ├── components/
 │   ├── ImageDropzone   # drag-drop / file picker with preview
+│   ├── MosaicSizing    # fixed / pieces sizing controls
+│   ├── PackModeSelect  # single mode or compare-all
 │   ├── JobProgress     # pipeline stage chips
 │   ├── PreviewGallery  # packed build / stud mosaic / matched flat
+│   ├── CompareResults  # side-by-side when multiple modes ran
 │   ├── ResultSummary   # grid size, piece count, colors
 │   ├── BomTable        # parts list + .txt download
 │   └── ErrorNotice
