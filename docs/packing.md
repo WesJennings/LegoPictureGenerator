@@ -4,7 +4,7 @@ This folder turns a **stud grid of matched LEGO colors** into a **list of physic
 
 The stud grid is **never modified**. Packers only **read** `studs` and emit `PlacedPart` lists. Implementations are C++ (`native/src/packers.cpp`) with the same control flow as the original Java. See [native.md](native.md).
 
-**Docs split:** this README is the high-level map (types, wiring, BOM, research). Step-by-step algorithm explanations live only in [`ALGORITHM_WALKTHROUGH.md`](algorithm-walkthrough.md). Formulas: [`packing/MATH.md`](packing/MATH.md).
+**Docs split:** this README is the high-level map (types, wiring, BOM, research). Step-by-step algorithm explanations live only in [`algorithm-walkthrough.md`](algorithm-walkthrough.md). Formulas: [`packing/MATH.md`](packing/MATH.md).
 
 **Related:** [root](../README.md) · [Color](color.md) · [Image](image.md) · [Architecture](architecture.md) · [MATH index](MATH.md)
 
@@ -42,10 +42,10 @@ After color matching, every cell is one LEGO color. Packing asks:
 studs[][] ──► PlateCatalog ──► packers 1–6 ──► PackResult
                                       │
                                       ▼
-                         PackBom / PackCompare / packed PNGs
+                         formatBom / placements JSON / packed PNGs
 ```
 
-**Not packing’s job:** rewriting `studs`, drawing the flat mosaic (`output_lego.png`), or producing a left-to-right build order (list order is “placement order”).
+**Not packing’s job:** rewriting `studs`, drawing the flat mosaic (`matched.png`) or stud preview (`lego-studs.png`), or producing a left-to-right build order (list order is “placement order”).
 
 ---
 
@@ -94,7 +94,7 @@ To add a size: put it in `BASE`, ensure it exists in `elements` for the colors y
 
 ## 6. Algorithms → walkthrough
 
-**All algorithm explanations are in [`ALGORITHM_WALKTHROUGH.md`](algorithm-walkthrough.md)** (same numbering 1–6), including ASCII progress on a shared toy grid, side-by-side compare, and a cheat sheet.
+**All algorithm explanations are in [`algorithm-walkthrough.md`](algorithm-walkthrough.md)** (same numbering 1–6), including ASCII progress on a shared toy grid, side-by-side compare, and a cheat sheet.
 
 | # | Walkthrough section |
 |---|---------------------|
@@ -111,10 +111,9 @@ Do not duplicate those walkthroughs here.
 
 ## 7. BOM, wiring, status
 
-**BOM** (`PackBom`): shopping counts by `(partNum, color)` — locations dropped.  
-**Compare** (`PackCompare.compareAll`): piece counts / times / deltas vs greedy.
+**BOM** (`formatBom` in `text.cpp`): shopping counts by `(partNum, color)` — locations dropped. Side-by-side mode comparison is done in the web UI (`CompareResults`) when multiple modes run; there is no `bom-compare.txt` artifact.
 
-**Wiring** (`native/src/pipeline.cpp`): load `PlateCatalog` once at startup (`loadCatalog`) → run the requested packers → write `bom-<mode>.txt`, `placements-<mode>.json`, and packed `lego-<mode>.png` into the job's output directory. The web UI requests `greedy`; the CLI accepts any comma-separated mode list.
+**Wiring** (`native/src/pipeline.cpp`): `loadCatalog` once at startup → run the requested packers → write `bom-<mode>.txt`, `placements-<mode>.json`, and packed `lego-<mode>.png` into the job's output directory. The web UI defaults to `greedy`, can pick any single mode or compare-all (all six), and forces `dlx` when `sizing=pieces`; the CLI accepts any comma-separated mode list.
 
 | Status | Meaning |
 |--------|---------|

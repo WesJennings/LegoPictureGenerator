@@ -16,12 +16,12 @@ Build or download via [rebrickable-sqlite](https://github.com/jncraton/rebrickab
 |-------|----------|
 | `colors` | `id`, `name`, `rgb`, `is_trans` — palette for matching |
 | `elements` | `part_num` + `color_id` — which colors exist for a part |
-| `parts` | Optional / tooling (e.g. verifying plate names) |
+| `parts` | Present in typical Rebrickable dumps; **not queried** by the C++ host |
 
 ### Callers
 
-- [`ColorMatcher`](../docs/color.md) — `loadElements` / `loadColors` (default part `3024`)
-- [`PlateCatalog`](../docs/packing.md) — which plate sizes exist in which colors
+- [`loadCatalog`](../docs/color.md) — palette for part `3024` (1×1 plate) via `elements` ⨝ `colors`
+- Plate footprints — which plate sizes exist in which colors (same `elements` rows for the hardcoded `BASE` part numbers)
 
 Both are loaded once at startup by `native/src/catalog.cpp`;
 the server refuses to start without this file.
