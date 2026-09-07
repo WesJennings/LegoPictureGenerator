@@ -64,10 +64,10 @@ The flat matched mosaic (no stud texture) is written separately as
 
 ## Color / BOM text (`text.cpp`)
 
-Does **not** re-scan the grid. Formats maps already filled during matching:
-total studs (= 1×1 piece count before packing) and per-color lines sorted by
-count → `color-counts.txt`. Packed shopping lists use `formatBom`; optional
-1×1 stud lists use `formatStudBom` → `bom-studs.txt`.
+Does **not** re-scan the grid. Formats maps the pipeline already filled after
+matching (`studGridFromMatch`): total studs (= 1×1 piece count before packing)
+and per-color lines sorted by count → `color-counts.txt`. Packed shopping lists
+use `formatBom`; optional 1×1 stud lists use `formatStudBom` → `bom-studs.txt`.
 
 ## Run
 

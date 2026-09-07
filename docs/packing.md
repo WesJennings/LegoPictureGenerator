@@ -29,14 +29,14 @@ After color matching, every cell is one LEGO color. Packing asks:
 
 > Cover every stud with catalog plates so that each stud is covered **exactly once**, every plate is a **single solid color**, the part+color exists in the DB, and we prefer **fewer pieces**.
 
-| # | Mode | Class | One-line strategy |
-|---|------|--------|-------------------|
-| **1** | `greedy` | `GreedyPacker` | Largest-first + multi scan-order + 1×1 repair |
-| **2** | `ilp` | `ExactIlpPacker` | Per-blob B&B set-partition; large blobs → greedy |
-| **3** | `rle` | `RlePacker` | Row RLE strips + vertical merge |
-| **4** | `component` | `ComponentGreedyPacker` | Per-blob largest-first (no repair) |
-| **5** | `dlx` | `DlxPacker` | Same model as ILP; fewest-options Algorithm X search |
-| **6** | `anneal` | `AnnealPacker` | SA local search from a greedy seed |
+| # | Mode | Entry point | One-line strategy |
+|---|------|-------------|-------------------|
+| **1** | `greedy` | `packGreedy` | Largest-first + multi scan-order + 1×1 repair |
+| **2** | `ilp` | `packIlp` | Per-blob B&B set-partition; large blobs → greedy |
+| **3** | `rle` | `packRle` | Row RLE strips + vertical merge |
+| **4** | `component` | `packComponent` | Per-blob largest-first (no repair) |
+| **5** | `dlx` | `packDlx` | Same model as ILP; fewest-options Algorithm X search |
+| **6** | `anneal` | `packAnneal` | SA local search from a greedy seed |
 
 ```text
 studs[][] ──► PlateCatalog ──► packers 1–6 ──► PackResult
