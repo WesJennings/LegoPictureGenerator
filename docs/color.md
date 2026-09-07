@@ -14,13 +14,11 @@ See also: [color/MATH.md](color/MATH.md).
 ## What it does
 
 1. **`loadCatalog(dbPath)`** — loads opaque `(part_num, color_id)` rows joined to `colors` (RGB + name) for part **`3024`** (Plate 1×1). Skips transparent colors and `color_id < 0`.
-2. **`nearestIndex(argb, palette)`** — Euclidean RGB distance to pick the closest element.
-3. **`matchImage(...)`** — for each pixel of the stud mosaic:
-   - writes the matched RGB back into a buffer
-   - fills a `StudGrid` of `LegoElement` (same dimensions)
-   - tallies `colorId → count` and one sample element per color
+2. **`nearestIndex(argb, palette)`** — Euclidean RGB distance to pick the closest palette entry.
+3. **`matchImage(...)`** — for each stud cell, writes matched ARGB and a palette index (`MatchResult`). It does **not** build the stud grid or tallies by itself.
+4. **`studGridFromMatch` (in `pipeline.cpp`)** — maps palette indices to `LegoElement`s, builds the `StudGrid` packers read, and tallies `colorId → count` (plus one sample element per color) for `color-counts.txt` / optional stud BOM.
 
-The stud grid is what the [packers](packing.md) and packed renders consume. The flat image is what `renderStuds` uses.
+Matched ARGB feeds `matched.png`, `renderStuds`, and `renderPacked`. The stud grid is what the [packers](packing.md) consume.
 
 ## Types
 
