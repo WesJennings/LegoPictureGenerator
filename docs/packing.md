@@ -147,11 +147,11 @@ These papers are background for what packing implements. None are required to ru
 | A. H. Land & A. G. Doig, *An Automatic Method of Solving Discrete Programming Problems*, Econometrica 28(3), 1960 | Foundational **branch-and-bound** for integer programs — prune when a partial solution cannot beat the best. | [PDF](https://jmvidal.cse.sc.edu/library/land60a.pdf) |
 | Karla L. Hoffman & Manfred Padberg, *Set Covering, Packing and Partitioning Problems* (survey) | Set cover vs packing vs **partitioning** (`ilp`/`dlx` are set partitioning: each stud covered exactly once). | [PDF](http://seor.vse.gmu.edu/~khoffman/Set_covering_set_packing_set_partitioning.pdf) |
 
-### Algorithm X / DLX heuristic (`DlxPacker`)
+### Algorithm X / DLX heuristic (`packDlx`)
 
 | Paper | Why it matters here | Link |
 |-------|---------------------|------|
-| Donald E. Knuth, *Dancing Links* (same as above) | **Fewest-options column choice** is the classic Algorithm X / DLX branching heuristic our `DlxPacker` uses (vs `ilp`’s lowest-bit order). Full dancing-links lists are optional; the heuristic is the important part. | [arXiv](https://arxiv.org/abs/cs/0011047) |
+| Donald E. Knuth, *Dancing Links* (same as above) | **Fewest-options column choice** is the classic Algorithm X / DLX branching heuristic our `packDlx` uses (vs `ilp`’s lowest-bit order). Full dancing-links lists are optional; the heuristic is the important part. | [arXiv](https://arxiv.org/abs/cs/0011047) |
 | Wikipedia: *Knuth’s Algorithm X* | Short readable summary of the matrix formulation and recursive search. | [Article](https://en.wikipedia.org/wiki/Knuth%27s_Algorithm_X) |
 
 ### Greedy / largest-first (`packGreedy`, `packComponent`)
@@ -160,7 +160,7 @@ These papers are background for what packing implements. None are required to ru
 |-------|---------------------|------|
 | B. S. Baker, E. G. Coffman Jr. & R. L. Rivest, *Orthogonal Packings in Two Dimensions*, SIAM J. Comput. 9(4), 1980 | Classic **greedy orthogonal rectangle packing** analysis — same family as largest-first plate placement. | [SIAM](https://epubs.siam.org/doi/10.1137/0209064) |
 
-### Row RLE / strip decomposition (`RlePacker`)
+### Row RLE / strip decomposition (`packRle`)
 
 | Paper / source | Why it matters here | Link |
 |----------------|---------------------|------|
@@ -175,11 +175,11 @@ These papers are background for what packing implements. None are required to ru
 | A. Rosenfeld & J. L. Pfaltz, *Sequential Operations in Digital Picture Processing*, JACM 13(4), 1966 | Early formal treatment of **connected component** operations on digital images — the ancestor of BFS/DFS blob extraction on a grid. | [ACM](https://dl.acm.org/doi/10.1145/321356.321357) |
 | Connected-component labeling (overview) | Modern summary of 4-/8-connectivity labeling used everywhere in vision pipelines. | [Wikipedia](https://en.wikipedia.org/wiki/Connected-component_labeling) |
 
-### Simulated annealing (`AnnealPacker`)
+### Simulated annealing (`packAnneal`)
 
 | Paper | Why it matters here | Link |
 |-------|---------------------|------|
-| S. Kirkpatrick, C. D. Gelatt & M. P. Vecchi, *Optimization by Simulated Annealing*, Science 220(4598), 1983 | Foundational SA: accept worse moves with `exp(−Δ/T)`, cool `T` — the accept/cool loop in `AnnealPacker`. | [Science](https://www.science.org/doi/10.1126/science.220.4598.671) · [PDF](https://sci2s.ugr.es/sites/default/files/files/Teaching/GraduatesCourses/Metaheuristicas/Bibliography/1983-Science-Kirkpatrick-sim_anneal.pdf) |
+| S. Kirkpatrick, C. D. Gelatt & M. P. Vecchi, *Optimization by Simulated Annealing*, Science 220(4598), 1983 | Foundational SA: accept worse moves with `exp(−Δ/T)`, cool `T` — the accept/cool loop in `packAnneal`. | [Science](https://www.science.org/doi/10.1126/science.220.4598.671) · [PDF](https://sci2s.ugr.es/sites/default/files/files/Teaching/GraduatesCourses/Metaheuristicas/Bibliography/1983-Science-Kirkpatrick-sim_anneal.pdf) |
 | Kathryn A. Dowsland, *Some experiments with simulated annealing techniques for packing problems*, EJOR 68(3), 1993 | Early SA experiments specifically on **packing** layouts — same metaheuristic family as window re-pack moves. | [ScienceDirect](https://www.sciencedirect.com/science/article/abs/pii/037722179390195S) · [DOI](https://doi.org/10.1016/0377-2217(93)90195-s) |
 
 ### LEGO construction / mosaic packing (domain)
