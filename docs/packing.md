@@ -137,9 +137,9 @@ native/src/text.cpp          ← BOM formatting
 
 ## 8. Research papers & further reading
 
-These papers are background for what this folder implements. None are required to run the code.
+These papers are background for what packing implements. None are required to run the code.
 
-### Exact cover, set partition, ILP / B&B (`ExactIlpPacker`, shared with `DlxPacker`)
+### Exact cover, set partition, ILP / B&B (`packIlp`, shared with `packDlx`)
 
 | Paper | Why it matters here | Link |
 |-------|---------------------|------|
@@ -154,7 +154,7 @@ These papers are background for what this folder implements. None are required t
 | Donald E. Knuth, *Dancing Links* (same as above) | **Fewest-options column choice** is the classic Algorithm X / DLX branching heuristic our `DlxPacker` uses (vs `ilp`’s lowest-bit order). Full dancing-links lists are optional; the heuristic is the important part. | [arXiv](https://arxiv.org/abs/cs/0011047) |
 | Wikipedia: *Knuth’s Algorithm X* | Short readable summary of the matrix formulation and recursive search. | [Article](https://en.wikipedia.org/wiki/Knuth%27s_Algorithm_X) |
 
-### Greedy / largest-first (`GreedyPacker`, `ComponentGreedyPacker`)
+### Greedy / largest-first (`packGreedy`, `packComponent`)
 
 | Paper | Why it matters here | Link |
 |-------|---------------------|------|
@@ -168,7 +168,7 @@ These papers are background for what this folder implements. None are required t
 | [wengraf/LEGOMosaics](https://github.com/wengraf/LEGOMosaics) | Practical mosaic pipeline that merges adjacent same-color groups after “legoizing” — close in spirit to row runs + merge. | [GitHub](https://github.com/wengraf/LEGOMosaics) |
 | Run-length encoding (signal/image processing surveys) | Phase A is literally RLE on each row of a binary color mask before catalog snapping. | [Wikipedia: RLE](https://en.wikipedia.org/wiki/Run-length_encoding) |
 
-### Connected components / flood fill (`ComponentGreedyPacker`, outer loops of `ilp`/`dlx`)
+### Connected components / flood fill (`packComponent`, outer loops of `ilp`/`dlx`)
 
 | Paper | Why it matters here | Link |
 |-------|---------------------|------|
@@ -193,27 +193,27 @@ These papers are background for what this folder implements. None are required t
 ### How this maps to our modes
 
 ```text
-1 GreedyPacker (greedy)
+1 packGreedy (greedy)
   ≈ largest-first / multi-start orthogonal packing
     (Baker–Coffman–Rivest; LEGO constructive heuristics)
 
-2 ExactIlpPacker (ilp)
+2 packIlp (ilp)
   ≈ set-partition ILP per blob (Hoffman–Padberg)
     + branch-and-bound (Land–Doig), lowest-bit branching
 
-3 RlePacker (rle)
+3 packRle (rle)
   ≈ row run-length encoding + strip/vertical merge
     (RLE + polyomino/strip tiling practice; LEGOMosaics-style merges)
 
-4 ComponentGreedyPacker (component)
+4 packComponent (component)
   ≈ connected-component decomposition (Rosenfeld lineage)
     + same largest-first inner packer (ablation of repair)
 
-5 DlxPacker (dlx)
+5 packDlx (dlx)
   ≈ same exact-cover model (Knuth Algorithm X)
     + fewest-options column heuristic (DLX spirit)
 
-6 AnnealPacker (anneal)
+6 packAnneal (anneal)
   ≈ Kirkpatrick SA on a packing layout
     (Dowsland-style packing SA; local window re-pack moves)
 ```
