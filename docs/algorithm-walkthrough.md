@@ -5,7 +5,7 @@ ASCII diagrams only (no Mermaid) so they show correctly in the editor.
 The six algorithms below are implemented in C++ (`native/src/packers.cpp`) with
 the same control flow as the original Java. See [native.md](native.md).
 
-**Docs split:** algorithm explanations live **here**. High-level types, wiring, BOM, and research papers live in [`README.md`](packing.md). Formulas: [`packing/MATH.md`](packing/MATH.md).
+**Docs split:** algorithm explanations live **here**. High-level types, wiring, BOM, and research papers live in [`packing.md`](packing.md). Formulas: [`packing/MATH.md`](packing/MATH.md).
 
 **Numbering:** Setup A–B first, then **algorithms 1–6** (one number per packer), then compare / outputs / cheat sheet.
 
@@ -31,26 +31,25 @@ the same control flow as the original Java. See [native.md](native.md).
   Input PNG
       │
       ▼
-  Downscale to studs
+  Sample to stud grid (toStudGrid / toStudGridByBlockSize)
       │
       ▼
-  ColorMatcher  ──────────────────────►  flat mosaic PNG
-      │                                 (output_lego.png)
+  matchImage  ──► matched.png (flat matched mosaic)
+      │           + lego-studs.png (renderStuds)
       ▼
   studs[][]  (READ ONLY — never rewritten)
       │
       ├──────────┬──────────┬──────────┬──────────┬──────────┐
       ▼          ▼          ▼          ▼          ▼          ▼
    greedy      ilp        rle     component     dlx      anneal
-  GreedyPack ExactIlp   RlePack  ComponentG  DlxPack  AnnealPack
       │          │          │          │          │          │
       └──────────┴──────────┴────┬─────┴──────────┴──────────┘
                                  ▼
-                    PackResult (List<PlacedPart>)
+                    PackResult (vector<PlacedPart>)
                                  │
                                  ▼
-              BOM + PackCompare + packed LEGO PNGs
-              (bom-<mode>.txt, lego-<mode>.png per job)
+              BOM + packed LEGO PNGs per mode
+              (bom-<mode>.txt, lego-<mode>.png, placements-<mode>.json)
 ```
 
 ```text
@@ -389,7 +388,7 @@ If a blob has **> 64** cells, exact search is skipped → `greedyComponent` (sta
 
 ### Big picture
 
-Strip-first packing (`RlePacker`): cover each row as horizontal runs, then stack matching strips into taller plates.
+Strip-first packing (`packRle`): cover each row as horizontal runs, then stack matching strips into taller plates.
 
 ```text
   pack()
@@ -464,7 +463,7 @@ Red strips don’t stack (only one cell under the 1×2).
 
 ### Big picture
 
-Same largest-first rule as greedy, but scoped to each color island (`ComponentGreedyPacker`). No multi-order scan, no 1×1 repair.
+Same largest-first rule as greedy, but scoped to each color island (`packComponent`). No multi-order scan, no 1×1 repair.
 
 ```text
   pack()
@@ -505,7 +504,7 @@ Same largest-first rule as greedy, but scoped to each color island (`ComponentGr
 
 ### Big picture
 
-Same problem as `ilp` (min placements, exact cover per blob). Different **branching rule** (`DlxPacker`).
+Same problem as `ilp` (min placements, exact cover per blob). Different **branching rule** (`packDlx`).
 
 ```text
   Same outer loop as ILP:
@@ -554,13 +553,13 @@ On Jarvis-scale runs, DLX often ties or beats `ilp` on pieces and finishes soone
 
 ### Big picture
 
-Metaheuristic polish (`AnnealPacker`): start from a full greedy solution, then randomly re-pack windows.
+Metaheuristic polish (`packAnneal`): start from a full greedy solution, then randomly re-pack windows.
 
 ```text
   pack()
     │
     ▼
-  seed = GreedyPacker.pack(studs)     // full multi-order greedy
+  seed = packGreedy(catalog, studs)   // full multi-order greedy
   best = current = seed
   T = temperature
     │
@@ -628,14 +627,17 @@ Metaheuristic polish (`AnnealPacker`): start from a full greedy solution, then r
 
 ## 8. How results are used after packing
 
-Each mode returns a `PackResult` → BOM text + packed PNG. Wiring, status strings, and file roles live in [`README.md`](packing.md) (high-level); this walkthrough stops at *how* each packer builds the placement list.
+Each mode returns a `PackResult` → BOM text + packed PNG + placements JSON. Wiring, status strings, and file roles live in [`packing.md`](packing.md) (high-level); this walkthrough stops at *how* each packer builds the placement list.
 
 | Artifact | Source |
 |----------|--------|
-| `bom_{mode}.txt` | Per-mode shopping list |
-| `bom_compare.txt` | Piece count / time / deltas vs greedy |
-| `output_lego_{mode}.png` | Packed render |
-| `output_lego.png` | Flat 1×1 mosaic (no packing) |
+| `matched.png` | Flat matched mosaic (`matchImage`) |
+| `lego-studs.png` | 1×1 stud preview (`renderStuds`) |
+| `lego-<mode>.png` | Packed render (`renderPacked`) |
+| `bom-<mode>.txt` | Per-mode shopping list (`formatBom`) |
+| `placements-<mode>.json` | Every placed plate |
+| `color-counts.txt` | Per-color stud tally |
+| `bom-studs.txt` | Optional 1×1 stud BOM (`includeStudBom`) |
 
 ---
 
