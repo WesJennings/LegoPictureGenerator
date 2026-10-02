@@ -10,7 +10,7 @@ npm install
 npm run dev     # http://localhost:5173, proxies /api → 127.0.0.1:8080
 ```
 
-Start the backend first (`make setup && make dev` at the repo root). The Vite
+Start the C++ host first (`make setup && make dev` at the repo root). The Vite
 proxy means no CORS configuration anywhere.
 
 ## Build
@@ -25,24 +25,29 @@ http://127.0.0.1:8080.
 
 ## Structure
 
-```
+```text
 src/
-├── main.tsx            # router: / (create) and /jobs/:jobId (results)
-├── App.tsx             # shell layout
+├── main.tsx              # router: / (create) and /jobs/:jobId (results)
+├── App.tsx               # shell layout
+├── packModes.ts          # pack algorithm labels (matches C++ mode names)
 ├── api/
-│   ├── jobs.ts         # createJob / getJob fetch wrappers
-│   └── types.ts        # mirrors the backend JSON contract (docs/api.md)
+│   ├── jobs.ts           # createJob / getJob fetch wrappers
+│   └── types.ts          # JSON contract (docs/api.md)
 ├── pages/
-│   ├── CreateJobPage   # dropzone + width slider + submit
-│   └── JobPage         # 750ms polling until COMPLETE/FAILED, then results
+│   ├── CreateJobPage     # dropzone + sizing + pack mode + submit
+│   └── JobPage           # poll until COMPLETE/FAILED, then results
 ├── components/
-│   ├── ImageDropzone   # drag-drop / file picker with preview
-│   ├── JobProgress     # pipeline stage chips
-│   ├── PreviewGallery  # packed build / stud mosaic / matched flat
-│   ├── ResultSummary   # grid size, piece count, colors
-│   ├── BomTable        # parts list + .txt download
+│   ├── ImageDropzone     # drag-drop / file picker with preview
+│   ├── MosaicSizing      # classic / stud-aim / piece-aim
+│   ├── MosaicSettings    # extra job options
+│   ├── PackModeSelect    # greedy / compare-all / …
+│   ├── JobProgress       # pipeline stage chips
+│   ├── PreviewGallery    # packed / stud mosaic / matched flat
+│   ├── ResultSummary     # grid size, piece count, colors
+│   ├── BomTable          # parts list + .txt download
+│   ├── CompareResults    # side-by-side pack modes
 │   └── ErrorNotice
-└── styles/app.css      # plain CSS, dark theme
+└── styles/app.css        # plain CSS, dark theme
 ```
 
 Artifacts (preview PNGs, BOM downloads) are plain URLs returned by the job

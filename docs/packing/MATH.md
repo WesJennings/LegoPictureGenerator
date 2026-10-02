@@ -25,7 +25,7 @@ depends on connected same-color regions and available plate sizes.
 
 ## DLX / Algorithm X (sketch)
 
-`DlxPacker` solves exact cover on each same-color connected component (blob):
+`packDlx` solves exact cover on each same-color connected component (blob):
 
 1. Flood-fill a mono-color component of `n` cells.
 2. Enumerate legal plate placements that lie entirely inside the component.
@@ -37,7 +37,7 @@ depends on connected same-color regions and available plate sizes.
 Status strings: `optimal` if every blob was exact; otherwise
 `exact_partial (... greedy fallback)`.
 
-**Code:** `DlxPacker` → C++ `lego::packDlx` (`native/src/packers.cpp`). Full narrative: [algorithm-walkthrough.md](../algorithm-walkthrough.md).
+**Code:** `lego::packDlx` (`native/src/engine/packers.cpp`). Full narrative: [algorithm-walkthrough.md](../algorithm-walkthrough.md).
 
 ## Why piece targets need search
 

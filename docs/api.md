@@ -3,8 +3,10 @@
 Base URL: `http://127.0.0.1:8080`. All endpoints are under `/api/v1`.
 JSON errors always have the shape `{"error": "message"}`.
 
-Requests must carry a local `Host` header (`localhost` or `127.0.0.1`);
-anything else gets `403`.
+Requests must carry a `Host` header listed in `LEGO_ALLOWED_HOSTS` (default
+`localhost`, `127.0.0.1`); anything else gets `403`. When
+`LEGO_UPLOADS_PER_MINUTE` is set, a client that creates too many jobs gets
+`429` with a `Retry-After: 60` header.
 
 ## POST /api/v1/jobs
 
@@ -101,6 +103,6 @@ still queued or running.
 
 ## GET /api/v1/health
 
-`200` with `{"status":"ok","dbPath":"data/bricks.db","paletteColors":67}`.
+`200` with `{"status":"ok","paletteColors":67}`.
 Startup fails outright if `bricks.db` is missing, so a running server implies
 a loaded catalog.

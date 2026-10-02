@@ -1,8 +1,8 @@
 # Image sampling & rendering
 
 How a photo becomes a stud grid, and how results are drawn to look like LEGO.
-Averaging and drawing loops are C++ (`native/src/image_sampler.cpp`,
-`native/src/renderer.cpp`). See [native.md](native.md).
+Averaging and drawing loops are C++ (`native/src/engine/image_sampler.cpp`,
+`native/src/engine/renderer.cpp`). See [native.md](native.md).
 
 See also: [sampling/MATH.md](sampling/MATH.md) · [sizing/MATH.md](sizing/MATH.md).
 
@@ -10,15 +10,16 @@ See also: [sampling/MATH.md](sampling/MATH.md) · [sizing/MATH.md](sizing/MATH.m
 
 | File | Role |
 |------|------|
-| `image_sampler.cpp` | Photo → stud grid (box averaging, aspect-preserving) |
-| `renderer.cpp` | Procedural stud / packed-plate PNGs (no file I/O) |
-| `text.cpp` | Format color tallies into a shopping-list report |
+| `engine/image_sampler.cpp` | Photo → stud grid (box averaging, aspect-preserving) |
+| `engine/renderer.cpp` | Procedural stud / packed-plate PNG pixels (no file I/O) |
+| `host/text.cpp` | Format color tallies into a shopping-list report |
+| `host/image_io.cpp` | Decode upload / encode PNG artifacts |
 
 The pipeline that wires these together is
-`native/src/pipeline.cpp`; per-job outputs land in
+`native/src/host/pipeline.cpp`; per-job outputs land in
 `runtime/jobs/<uuid>/` (web) or the directory you pass to the CLI.
 
-## `ImageSampler`
+## Sampling
 
 Replaces the old fixed `BLOCK_SIZE` downscale. You choose the **output** size
 (`targetStudWidth`, 16–128 studs); the sampler derives the height from the
@@ -42,24 +43,26 @@ Properties worth knowing:
 - Non-divisible dimensions are handled by proportional block edges, so edge
   rows/columns are never dropped.
 
-## `LegoRenderer`
+Entry points: `toStudGrid`, `toStudGridByBlockSize` (`image_sampler.cpp`).
 
-Pure functions — the caller writes files.
+## Rendering
 
-| Method | Draws |
-|--------|--------|
-| `renderStuds(BufferedImage, studSizePx)` | Every stud as its own 1×1 visual plate + knob |
-| `renderPacked(List<PlacedPart>, studs, studSizePx)` | Multi-stud plates as one continuous body + knobs per stud |
-| `renderPacked(PackResult, studs, studSizePx)` | Same, from a pack result |
+Pure functions — the caller writes files (`image_io.cpp`).
 
-Colors for packed plates are sampled from `studs[y][x]` at each part's origin.
-Default stud size is 24 px (`JobConfig.DEFAULT_RENDER_STUD_PX`).
+| Function | Draws |
+|----------|--------|
+| `renderStuds(gridArgb, cols, rows, studSizePx)` | Every stud as its own 1×1 visual plate + knob |
+| `renderPacked(gridArgb, cols, rows, studSizePx, placed)` | Multi-stud plates as one continuous body + knobs per stud |
 
-## `PieceCountFormatter`
+Colors for packed plates are sampled from the stud grid at each part's origin.
+Default stud size is 24 px (`DEFAULT_RENDER_STUD_PX` in `types.hpp`).
 
-Does **not** re-scan the grid. Formats maps already filled during
-`ColorMatcher.matchImage`: total studs (= 1×1 piece count before packing) and
-per-color lines sorted by count. Written to `color-counts.txt` per job.
+## Color-count report
+
+`formatColorCounts` in `text.cpp` does **not** re-scan the grid. It formats
+maps already filled during `matchImage`: total studs (= 1×1 piece count before
+packing) and per-color lines sorted by count. Written to `color-counts.txt`
+per job.
 
 ## Run
 
@@ -70,4 +73,5 @@ From the repo root: `make start` (web) or `make cli` (offline). See the
 
 - [`color.md`](color.md) — matching
 - [`packing.md`](packing.md) — packing overview + research · [`algorithm-walkthrough.md`](algorithm-walkthrough.md) — algorithm details
-- [`architecture.md`](architecture.md) — full pipeline and job system
+- [`../ARCHITECTURE.md`](../ARCHITECTURE.md) — layout and pipeline
+- [`architecture.md`](architecture.md) — ops: safety, retention, config

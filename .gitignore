@@ -1,18 +1,5 @@
-# Compiled class files
-*.class
-
-# Log file
+# Logs
 *.log
-
-# Package files
-*.jar
-*.war
-*.zip
-*.tar.gz
-
-# JVM crash logs
-hs_err_pid*
-replay_pid*
 
 # Database (see data/README.md for how to obtain bricks.db)
 *.db
@@ -27,5 +14,11 @@ web/dist/
 # Per-job runtime data (web uploads + CLI output)
 runtime/
 
+# Deployment secrets (see .env.example)
+.env
+
 # macOS
 .DS_Store
+
+# Editor state (machine-specific paths)
+.vscode/

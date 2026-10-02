@@ -2,7 +2,7 @@
 
 ASCII diagrams only (no Mermaid) so they show correctly in the editor.
 
-The six algorithms below are implemented in C++ (`native/src/packers.cpp`) with
+The six algorithms below are implemented in C++ (`native/src/engine/packers.cpp`) with
 the same control flow as the original Java. See [native.md](native.md).
 
 **Docs split:** algorithm explanations live **here**. High-level types, wiring, BOM, and research papers live in [`README.md`](packing.md). Formulas: [`packing/MATH.md`](packing/MATH.md).
@@ -34,22 +34,22 @@ the same control flow as the original Java. See [native.md](native.md).
   Downscale to studs
       │
       ▼
-  ColorMatcher  ──────────────────────►  flat mosaic PNG
-      │                                 (output_lego.png)
+  matchImage  ──────────────────────►  flat mosaic PNG
+      │                                 (matched.png)
       ▼
   studs[][]  (READ ONLY — never rewritten)
       │
       ├──────────┬──────────┬──────────┬──────────┬──────────┐
       ▼          ▼          ▼          ▼          ▼          ▼
    greedy      ilp        rle     component     dlx      anneal
-  GreedyPack ExactIlp   RlePack  ComponentG  DlxPack  AnnealPack
+  packGreedy packIlp   packRle packComponent packDlx packAnneal
       │          │          │          │          │          │
       └──────────┴──────────┴────┬─────┴──────────┴──────────┘
                                  ▼
-                    PackResult (List<PlacedPart>)
+                    PackResult (vector<PlacedPart>)
                                  │
                                  ▼
-              BOM + PackCompare + packed LEGO PNGs
+              BOM + packed LEGO PNGs
               (bom-<mode>.txt, lego-<mode>.png per job)
 ```
 
@@ -389,7 +389,7 @@ If a blob has **> 64** cells, exact search is skipped → `greedyComponent` (sta
 
 ### Big picture
 
-Strip-first packing (`RlePacker`): cover each row as horizontal runs, then stack matching strips into taller plates.
+Strip-first packing (`packRle`): cover each row as horizontal runs, then stack matching strips into taller plates.
 
 ```text
   pack()
@@ -464,7 +464,7 @@ Red strips don’t stack (only one cell under the 1×2).
 
 ### Big picture
 
-Same largest-first rule as greedy, but scoped to each color island (`ComponentGreedyPacker`). No multi-order scan, no 1×1 repair.
+Same largest-first rule as greedy, but scoped to each color island (`packComponent`). No multi-order scan, no 1×1 repair.
 
 ```text
   pack()
@@ -505,7 +505,7 @@ Same largest-first rule as greedy, but scoped to each color island (`ComponentGr
 
 ### Big picture
 
-Same problem as `ilp` (min placements, exact cover per blob). Different **branching rule** (`DlxPacker`).
+Same problem as `ilp` (min placements, exact cover per blob). Different **branching rule** (`packDlx`).
 
 ```text
   Same outer loop as ILP:
@@ -554,13 +554,13 @@ On Jarvis-scale runs, DLX often ties or beats `ilp` on pieces and finishes soone
 
 ### Big picture
 
-Metaheuristic polish (`AnnealPacker`): start from a full greedy solution, then randomly re-pack windows.
+Metaheuristic polish (`packAnneal`): start from a full greedy solution, then randomly re-pack windows.
 
 ```text
   pack()
     │
     ▼
-  seed = GreedyPacker.pack(studs)     // full multi-order greedy
+  seed = packGreedy(studs)     // full multi-order greedy
   best = current = seed
   T = temperature
     │
@@ -632,10 +632,11 @@ Each mode returns a `PackResult` → BOM text + packed PNG. Wiring, status strin
 
 | Artifact | Source |
 |----------|--------|
-| `bom_{mode}.txt` | Per-mode shopping list |
-| `bom_compare.txt` | Piece count / time / deltas vs greedy |
-| `output_lego_{mode}.png` | Packed render |
-| `output_lego.png` | Flat 1×1 mosaic (no packing) |
+| `bom-<mode>.txt` | Per-mode shopping list |
+| `lego-<mode>.png` | Packed render |
+| `lego-studs.png` | Flat 1×1 mosaic (no packing) |
+| `matched.png` | Color-matched stud grid |
+| `placements-<mode>.json` | Every placed plate |
 
 ---
 

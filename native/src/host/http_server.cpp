@@ -39,13 +39,13 @@ void setError(httplib::Response& res, int status, const std::string& msg) {
 }
 
 std::string hostBare(const std::string& host) {
+  // IPv6 literal: [::1]:8080 -> ::1
+  if (!host.empty() && host[0] == '[') {
+    auto close = host.find(']');
+    return close == std::string::npos ? host : host.substr(1, close - 1);
+  }
   auto colon = host.find(':');
   return colon == std::string::npos ? host : host.substr(0, colon);
-}
-
-bool localHost(const std::string& hostHeader) {
-  std::string bare = hostBare(hostHeader);
-  return bare == "localhost" || bare == "127.0.0.1";
 }
 
 std::string formField(const httplib::Request& req, const std::string& name) {
@@ -165,22 +165,90 @@ void writeExact(const std::string& path, const std::string& bytes) {
 
 }  // namespace
 
+bool isAllowedHostHeader(const std::string& hostHeader,
+                         const std::vector<std::string>& allowedHosts) {
+  std::string bare = toLowerCopy(hostBare(trimCopy(hostHeader)));
+  if (bare.empty()) {
+    return false;
+  }
+  for (const auto& h : allowedHosts) {
+    if (bare == h) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool isAllowedHostHeader(const std::string& hostHeader) {
-  return localHost(hostHeader);
+  static const std::vector<std::string> kLocal = {"localhost", "127.0.0.1"};
+  return isAllowedHostHeader(hostHeader, kLocal);
+}
+
+std::string clientIpFor(const std::string& remoteAddr, const std::string& cfConnectingIp,
+                        const std::string& xForwardedFor, bool trustProxy) {
+  if (trustProxy) {
+    std::string cf = trimCopy(cfConnectingIp);
+    if (!cf.empty()) {
+      return cf;
+    }
+    std::string xff = xForwardedFor;
+    auto comma = xff.find(',');
+    if (comma != std::string::npos) {
+      xff = xff.substr(0, comma);
+    }
+    xff = trimCopy(xff);
+    if (!xff.empty()) {
+      return xff;
+    }
+  }
+  return remoteAddr;
+}
+
+bool RateLimiter::allow(const std::string& key, int64_t nowMs) {
+  if (perMinute_ <= 0) {
+    return true;
+  }
+  constexpr int64_t kWindowMs = 60'000;
+  std::lock_guard<std::mutex> lock(mu_);
+  // Bound memory: drop stale windows once the map gets large.
+  if (windows_.size() > 10'000) {
+    for (auto it = windows_.begin(); it != windows_.end();) {
+      if (nowMs - it->second.startMs >= kWindowMs) {
+        it = windows_.erase(it);
+      } else {
+        ++it;
+      }
+    }
+  }
+  Window& w = windows_[key];
+  if (nowMs - w.startMs >= kWindowMs) {
+    w.startMs = nowMs;
+    w.count = 0;
+  }
+  if (w.count >= perMinute_) {
+    return false;
+  }
+  w.count++;
+  return true;
 }
 
 struct HttpServer::Impl {
   httplib::Server svr;
+  HttpOptions options;
+  RateLimiter limiter;
+  explicit Impl(HttpOptions o) : options(std::move(o)), limiter(options.uploadsPerMinute) {}
 };
 
 HttpServer::HttpServer(JobService& jobs, FileJobRepository& repo, const Catalog& catalog,
-                       std::string webDist)
-    : impl_(std::make_unique<Impl>()) {
+                       std::string webDist, HttpOptions options)
+    : impl_(std::make_unique<Impl>(std::move(options))) {
   auto& svr = impl_->svr;
+  const HttpOptions& opts = impl_->options;
+  RateLimiter& limiter = impl_->limiter;
   svr.set_payload_max_length(static_cast<size_t>(MAX_UPLOAD_BYTES + 1024 * 1024));
-  svr.set_pre_routing_handler([](const httplib::Request& req, httplib::Response& res) {
-    if (!isAllowedHostHeader(req.get_header_value("Host"))) {
-      setError(res, 403, "Only local requests are allowed");
+  svr.set_pre_routing_handler([&opts](const httplib::Request& req, httplib::Response& res) {
+    if (!isAllowedHostHeader(req.get_header_value("Host"), opts.allowedHosts)) {
+      setError(res, 403, "Host not allowed");
       return httplib::Server::HandlerResponse::Handled;
     }
     return httplib::Server::HandlerResponse::Unhandled;
@@ -189,13 +257,18 @@ HttpServer::HttpServer(JobService& jobs, FileJobRepository& repo, const Catalog&
   svr.Get("/api/v1/health", [&](const httplib::Request&, httplib::Response& res) {
     json j;
     j["status"] = "ok";
-    j["dbPath"] = catalog.dbPath;
     j["paletteColors"] = static_cast<int>(catalog.palette.size());
     setJson(res, 200, j);
   });
 
   svr.Post("/api/v1/jobs", [&](const httplib::Request& req, httplib::Response& res) {
     try {
+      std::string ip = clientIpFor(req.remote_addr, req.get_header_value("CF-Connecting-IP"),
+                                   req.get_header_value("X-Forwarded-For"), opts.trustProxy);
+      if (!limiter.allow(ip, nowMs())) {
+        res.set_header("Retry-After", "60");
+        throw HttpError(429, "Too many uploads; try again in a minute");
+      }
       if (!req.has_file("image")) {
         throw HttpError(400, "Multipart field 'image' is required");
       }

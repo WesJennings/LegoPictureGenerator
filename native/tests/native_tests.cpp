@@ -58,9 +58,18 @@ static void testSampler() {
 }
 
 static void testNearest() {
-  std::vector<PaletteEntry> pal = {{0, 0, 0}, {255, 255, 255}};
+  assert(srgbToOklab(0, 0, 0).L < 0.02f);
+  assert(srgbToOklab(255, 255, 255).L > 0.99f);
+
+  std::vector<PaletteEntry> pal = {makePaletteEntry(0, 0, 0), makePaletteEntry(255, 255, 255)};
   assert(nearestIndex(0xFF000000, pal) == 0);
   assert(nearestIndex(0xFFFFFFFF, pal) == 1);
+  assert(nearestIndex(0xFF101010, pal) == 0);
+  assert(nearestIndex(0xFFF0F0F0, pal) == 1);
+
+  std::vector<PaletteEntry> rb = {makePaletteEntry(255, 0, 0), makePaletteEntry(0, 0, 255)};
+  assert(nearestIndex(0xFFC81E1E, rb) == 0);
+  assert(nearestIndex(0xFF1E1EC8, rb) == 1);
 }
 
 static void testJavaRandom() {

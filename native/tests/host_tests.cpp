@@ -1,4 +1,5 @@
 #include "lego/catalog.hpp"
+#include "lego/config.hpp"
 #include "lego/http_server.hpp"
 #include "lego/image_io.hpp"
 #include "lego/image_sampler.hpp"
@@ -229,7 +230,7 @@ static void testRecoverInterrupted() {
   auto loaded = repo.findJob(m.id);
   assert(loaded);
   assert(loaded->status == "FAILED");
-  assert(loaded->error && *loaded->error == "Interrupted by backend restart");
+  assert(loaded->error && *loaded->error == "Interrupted by server restart");
 }
 
 static void testPipelineGreedy() {
@@ -351,6 +352,107 @@ static void testHostHeaderGuard() {
   assert(!isAllowedHostHeader("evil.example"));
   assert(!isAllowedHostHeader("example.com:8080"));
   assert(!isAllowedHostHeader(""));
+
+  std::vector<std::string> allow = {"mosaic.example.com"};
+  assert(isAllowedHostHeader("mosaic.example.com", allow));
+  assert(isAllowedHostHeader("Mosaic.Example.COM:443", allow));
+  assert(!isAllowedHostHeader("localhost", allow));
+  assert(!isAllowedHostHeader("evil.mosaic.example.com", allow));
+  assert(isAllowedHostHeader("[::1]:8080", {"::1"}));
+
+  auto hosts = parseHostList(" Mosaic.Example.com , localhost,, ");
+  assert(hosts.size() == 2);
+  assert(hosts[0] == "mosaic.example.com");
+  assert(hosts[1] == "localhost");
+}
+
+static void testClientIp() {
+  assert(clientIpFor("10.0.0.5", "203.0.113.9", "198.51.100.2, 10.0.0.1", false) == "10.0.0.5");
+  assert(clientIpFor("10.0.0.5", "203.0.113.9", "198.51.100.2, 10.0.0.1", true) == "203.0.113.9");
+  assert(clientIpFor("10.0.0.5", "", "198.51.100.2, 10.0.0.1", true) == "198.51.100.2");
+  assert(clientIpFor("10.0.0.5", "", "", true) == "10.0.0.5");
+}
+
+static void testRateLimiter() {
+  RateLimiter off(0);
+  for (int i = 0; i < 100; i++) {
+    assert(off.allow("a", 0));
+  }
+
+  RateLimiter two(2);
+  assert(two.allow("a", 1000));
+  assert(two.allow("a", 1000));
+  assert(!two.allow("a", 1000));
+  assert(two.allow("b", 1000));
+  assert(!two.allow("a", 30'000));
+  assert(two.allow("a", 61'000));
+}
+
+static void testHttpProxyMode() {
+  TempDir tmp;
+  Catalog cat = loadCatalog(makeFixtureDb(tmp.path, false));
+  auto repo = std::make_shared<FileJobRepository>((tmp.path / "jobs").string());
+  JobService jobs(repo, cat, 1);
+  HttpOptions opts;
+  opts.allowedHosts = {"mosaic.example.com"};
+  opts.trustProxy = true;
+  opts.uploadsPerMinute = 1;
+  HttpServer http(jobs, *repo, cat, "", opts);
+  int port = http.bindAny("127.0.0.1");
+  assert(port > 0);
+  std::thread serverThread([&] { http.listenAfterBind(); });
+  http.waitUntilReady();
+
+  httplib::Client plain("127.0.0.1", port);
+  plain.set_connection_timeout(2, 0);
+  auto denied = plain.Get("/api/v1/health");
+  assert(denied);
+  assert(denied->status == 403);
+
+  httplib::Client cli("127.0.0.1", port);
+  cli.set_connection_timeout(2, 0);
+  cli.set_read_timeout(60, 0);
+  cli.set_default_headers({{"Host", "mosaic.example.com"}});
+  auto health = cli.Get("/api/v1/health");
+  assert(health);
+  assert(health->status == 200);
+  auto hj = json::parse(health->body);
+  assert(!hj.contains("dbPath"));
+
+  auto input = (tmp.path / "proxy-input.png").string();
+  writeCheckerPng(input, 160);
+  std::string pngBytes = readFile(input);
+  httplib::MultipartFormDataItems form{
+      {"image", pngBytes, "input.png", "image/png"},
+      {"modes", "greedy", "", ""},
+  };
+
+  auto first = cli.Post("/api/v1/jobs", {{"CF-Connecting-IP", "203.0.113.9"}}, form);
+  assert(first);
+  assert(first->status == 202);
+  auto second = cli.Post("/api/v1/jobs", {{"CF-Connecting-IP", "203.0.113.9"}}, form);
+  assert(second);
+  assert(second->status == 429);
+  assert(second->get_header_value("Retry-After") == "60");
+  auto other = cli.Post("/api/v1/jobs", {{"CF-Connecting-IP", "203.0.113.10"}}, form);
+  assert(other);
+  assert(other->status == 202);
+
+  // Let queued jobs finish before the server goes away.
+  for (const std::string id : {std::string(json::parse(first->body)["jobId"]),
+                               std::string(json::parse(other->body)["jobId"])}) {
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(60);
+    while (std::chrono::steady_clock::now() < deadline) {
+      auto m = jobs.findJob(id);
+      if (m && isTerminalStatus(m->status)) {
+        break;
+      }
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+  }
+
+  http.stop();
+  serverThread.join();
 }
 
 static void testHttpApi() {
@@ -484,7 +586,10 @@ int main() {
   testPipelineStudBom();
   testCatalogParityAndRender();
   testHostHeaderGuard();
+  testClientIp();
+  testRateLimiter();
   testHttpApi();
+  testHttpProxyMode();
   std::cout << "host tests ok\n";
   return 0;
 }

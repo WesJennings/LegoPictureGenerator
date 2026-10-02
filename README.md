@@ -34,22 +34,28 @@ cd web && npm run dev     # terminal 2: Vite dev server on :5173 (proxies /api)
 Other targets: `make test` (C++ tests + frontend type-check),
 `make cli` (offline run on a sample image), `make clean`.
 
+Want it on the internet? See [`docs/deploy.md`](docs/deploy.md) — Docker
+image plus Cloudflare Tunnel from a home PC, or Caddy on a small VM.
+
 ## Repository layout
 
 | Path | What lives there |
 |---|---|
-| `native/` | C++ engine + HTTP host + CLI ([docs/native.md](docs/native.md)) |
+| `native/` | C++ engine + HTTP host + CLI ([native/README.md](native/README.md), [docs/native.md](docs/native.md)) |
 | `web/` | React + TypeScript + Vite frontend ([README](web/README.md)) |
-| `docs/` | Architecture, API reference, and algorithm deep-dives |
+| `docs/` | Architecture, API, algorithms ([docs/README.md](docs/README.md)) |
 | `data/` | `bricks.db` SQLite catalog (not committed; [how to get it](data/README.md)) |
 | `samples/` | Example input images |
 | `runtime/` | Per-job uploads and outputs (gitignored, safe to delete) |
 
 ## Documentation
 
-- [`ARCHITECTURE.md`](ARCHITECTURE.md) — system diagrams: layers, jobs, pipeline, storage
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) — **layout**, system diagrams, job pipeline
+- [`docs/README.md`](docs/README.md) — index of the long-form docs
+- [`native/README.md`](native/README.md) — C++ file map
 - [`docs/native.md`](docs/native.md) — C++ engine and host, CUDA next steps
 - [`docs/architecture.md`](docs/architecture.md) — ops detail: safety, retention, config
+- [`docs/deploy.md`](docs/deploy.md) — hosting it publicly (Docker, Cloudflare Tunnel, Caddy)
 - [`docs/api.md`](docs/api.md) — HTTP API reference with curl examples
 - [`docs/image.md`](docs/image.md) — image sampling and rendering
 - [`docs/color.md`](docs/color.md) — LEGO color matching
@@ -60,7 +66,7 @@ Other targets: `make test` (C++ tests + frontend type-check),
 ## How it works (30 seconds)
 
 1. **Sample** — the photo is box-averaged down to a stud grid (classic: ~54 studs wide; or aim for a stud/piece target).
-2. **Match** — every stud is matched to the nearest real LEGO color available as a 1×1 plate (Euclidean RGB over the `bricks.db` catalog).
+2. **Match** — every stud is matched to the nearest real LEGO color available as a 1×1 plate (Euclidean OKLab over the `bricks.db` catalog).
 3. **Pack** — same-color regions are tiled with the largest available plates. Six algorithms are implemented (greedy, ILP, RLE, component, DLX, anneal); piece-aim sizing always uses DLX with a multi-probe search.
 4. **Render + BOM** — packed previews are drawn with stud texture and plate outlines, and the parts list is aggregated per (part, color).
 

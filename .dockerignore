@@ -1,0 +1,11 @@
+.git
+.cursor
+.DS_Store
+native/build
+web/node_modules
+web/dist
+runtime
+data/*.db
+backend
+*.log
+.env

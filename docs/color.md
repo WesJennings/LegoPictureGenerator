@@ -8,13 +8,13 @@ See also: [color/MATH.md](color/MATH.md).
 
 | File | Role |
 |------|------|
-| `catalog.cpp` | Load palette from SQLite |
-| `color_matcher.cpp` | Euclidean nearest-color match |
+| `host/catalog.cpp` | Load palette from SQLite |
+| `engine/color_matcher.cpp` | Nearest-color match (Euclidean OKLab) |
 
 ## What it does
 
 1. **`loadCatalog(dbPath)`** — loads opaque `(part_num, color_id)` rows joined to `colors` (RGB + name) for part **`3024`** (Plate 1×1). Skips transparent colors and `color_id < 0`.
-2. **`nearestIndex(argb, palette)`** — Euclidean RGB distance to pick the closest element.
+2. **`nearestIndex(argb, palette)`** — convert the stud to OKLab, pick the closest palette slot by Euclidean distance (palette OKLab is precomputed). The slot’s **sRGB** is what gets written out.
 3. **`matchImage(...)`** — for each pixel of the stud mosaic:
    - writes the matched RGB back into a buffer
    - fills a `StudGrid` of `LegoElement` (same dimensions)
@@ -28,7 +28,7 @@ The stud grid is what the [packers](packing.md) and packed renders consume. The 
 
 ## Location & dependencies
 
-- `native/src/catalog.cpp`, `native/src/color_matcher.cpp`
+- `native/src/host/catalog.cpp`, `native/src/engine/color_matcher.cpp`
 - SQLite 3 (`libsqlite3-dev`), parameterized queries, DB opened read-only
 - Database at [`data/bricks.db`](../data/) (tables `elements`, `colors`), loaded
   once at startup
@@ -38,4 +38,5 @@ The stud grid is what the [packers](packing.md) and packed renders consume. The 
 ## Notes
 
 - Matching is to **elements that exist for the part**, not bare color names — so you only get colors that were actually produced for that plate.
+- Distance is Euclidean in **OKLab**, not sRGB. See [color/MATH.md](color/MATH.md).
 - `is_trans` in dumps may be `t`/`f` or `True`/`False`; both are handled.

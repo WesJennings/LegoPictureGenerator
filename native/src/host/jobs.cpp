@@ -417,7 +417,7 @@ void FileJobRepository::recoverInterruptedJobs() {
   for (auto m : listJobs()) {
     if (!isTerminalStatus(m.status)) {
       m.status = "FAILED";
-      m.error = "Interrupted by backend restart";
+      m.error = "Interrupted by server restart";
       try {
         saveManifest(m);
       } catch (...) {

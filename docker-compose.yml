@@ -1,0 +1,55 @@
+# Two ways to run:
+#   docker compose --profile tunnel up -d --build   # home PC via Cloudflare Tunnel
+#   docker compose --profile vps    up -d --build   # VM with Caddy on ports 80/443
+#
+# Copy .env.example to .env first.
+
+services:
+  app:
+    build: .
+    image: lego-picture-generator:latest
+    restart: unless-stopped
+    environment:
+      LEGO_ALLOWED_HOSTS: "${LEGO_DOMAIN:?set LEGO_DOMAIN in .env},localhost,127.0.0.1"
+      LEGO_TRUST_PROXY: "1"
+      LEGO_UPLOADS_PER_MINUTE: "${LEGO_UPLOADS_PER_MINUTE:-5}"
+      LEGO_WORKER_COUNT: "${LEGO_WORKER_COUNT:-1}"
+    volumes:
+      - ./data/bricks.db:/data/bricks.db:ro
+      - jobs:/jobs
+    # No published ports: only cloudflared / caddy can reach it.
+
+  # Home PC: outbound tunnel to Cloudflare. Nothing listens on the host.
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    profiles: ["tunnel"]
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run
+    environment:
+      TUNNEL_TOKEN: "${CLOUDFLARE_TUNNEL_TOKEN:?set CLOUDFLARE_TUNNEL_TOKEN in .env}"
+    depends_on:
+      app:
+        condition: service_healthy
+
+  # VM: Caddy terminates TLS and proxies to app.
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["vps"]
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      LEGO_DOMAIN: "${LEGO_DOMAIN}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      app:
+        condition: service_healthy
+
+volumes:
+  jobs:
+  caddy_data:
+  caddy_config:

@@ -6,8 +6,13 @@
 #   make build   - production web/dist + C++ binaries
 #   make start   - one C++ process serving API + built frontend
 #   make cli     - offline CLI on samples/Jarvis.png
+#
+#   make docker-build  - build the container image
+#   make docker-tunnel - run app + cloudflared (home PC; see docs/deploy.md)
+#   make docker-vps    - run app + caddy on 80/443 (VM)
+#   make docker-down   - stop whichever profile is running
 
-.PHONY: setup dev test build start cli clean
+.PHONY: setup dev test build start cli clean docker-build docker-tunnel docker-vps docker-down
 
 setup:
 	bash native/build.sh
@@ -35,3 +40,15 @@ cli:
 
 clean:
 	rm -rf web/dist web/node_modules runtime native/build
+
+docker-build:
+	docker compose build
+
+docker-tunnel:
+	docker compose --profile tunnel up -d --build
+
+docker-vps:
+	docker compose --profile vps up -d --build
+
+docker-down:
+	docker compose --profile tunnel --profile vps down

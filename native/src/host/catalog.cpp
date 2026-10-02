@@ -143,7 +143,7 @@ std::vector<PaletteEntry> paletteRgb(const std::vector<LegoElement>& palette) {
   std::vector<PaletteEntry> out;
   out.reserve(palette.size());
   for (const auto& e : palette) {
-    out.push_back(PaletteEntry{e.r, e.g, e.b});
+    out.push_back(makePaletteEntry(e.r, e.g, e.b));
   }
   return out;
 }

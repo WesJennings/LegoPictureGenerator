@@ -20,10 +20,10 @@ Build or download via [rebrickable-sqlite](https://github.com/jncraton/rebrickab
 
 ### Callers
 
-- [`ColorMatcher`](../docs/color.md) — `loadElements` / `loadColors` (default part `3024`)
-- [`PlateCatalog`](../docs/packing.md) — which plate sizes exist in which colors
+- [`color_matcher.cpp`](../docs/color.md) — `loadElements` / `loadColors` (default part `3024`)
+- [`catalog.cpp`](../docs/packing.md) — which plate sizes exist in which colors
 
-Both are loaded once at startup by `native/src/catalog.cpp`;
+Both are loaded once at startup by `native/src/host/catalog.cpp`;
 the server refuses to start without this file.
 
 ## Path

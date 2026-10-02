@@ -12,23 +12,25 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 find_package(SQLite3 REQUIRED)
 find_package(Threads REQUIRED)
 
+# Engine: mosaic math. No HTTP, no job knowledge.
 set(LEGO_ENGINE_SRC
-  src/image_sampler.cpp
-  src/color_matcher.cpp
-  src/packers.cpp
-  src/renderer.cpp
+  src/engine/image_sampler.cpp
+  src/engine/color_matcher.cpp
+  src/engine/packers.cpp
+  src/engine/renderer.cpp
 )
 
+# Host: catalog, pipeline, jobs, HTTP. Depends on the engine, not vice versa.
 set(LEGO_HOST_SRC
-  src/catalog.cpp
-  src/image_io.cpp
-  src/text.cpp
-  src/piece_target.cpp
-  src/pipeline.cpp
-  src/jobs.cpp
-  src/upload_validator.cpp
-  src/config.cpp
-  src/http_server.cpp
+  src/host/catalog.cpp
+  src/host/image_io.cpp
+  src/host/text.cpp
+  src/host/piece_target.cpp
+  src/host/pipeline.cpp
+  src/host/jobs.cpp
+  src/host/upload_validator.cpp
+  src/host/config.cpp
+  src/host/http_server.cpp
 )
 
 add_library(legocore STATIC ${LEGO_ENGINE_SRC} ${LEGO_HOST_SRC})
@@ -36,7 +38,11 @@ target_include_directories(legocore PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include
   ${CMAKE_CURRENT_SOURCE_DIR}/third_party
 )
-target_link_libraries(legocore PUBLIC SQLite::SQLite3 Threads::Threads)
+if(TARGET SQLite3::SQLite3)
+  target_link_libraries(legocore PUBLIC SQLite3::SQLite3 Threads::Threads)
+else()
+  target_link_libraries(legocore PUBLIC SQLite::SQLite3 Threads::Threads)
+endif()
 if(UNIX AND NOT APPLE)
   target_compile_options(legocore PRIVATE -O2 -Wall -Wextra -Wno-unused-parameter)
 endif()

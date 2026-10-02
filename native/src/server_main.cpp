@@ -27,14 +27,24 @@ int main() {
     repo->recoverInterruptedJobs();
     repo->enforceRetention();
     lego::JobService jobs(repo, catalog, cfg.workerCount);
-    lego::HttpServer http(jobs, *repo, catalog, cfg.webDist);
+    lego::HttpOptions opts;
+    opts.allowedHosts = cfg.allowedHosts;
+    opts.trustProxy = cfg.trustProxy;
+    opts.uploadsPerMinute = cfg.uploadsPerMinute;
+    lego::HttpServer http(jobs, *repo, catalog, cfg.webDist, opts);
     gServer = &http;
     std::signal(SIGINT, onSignal);
     std::signal(SIGTERM, onSignal);
-    std::cerr << "Lego Picture Generator listening on http://127.0.0.1:" << cfg.port
-              << std::endl;
-    if (!http.listen("127.0.0.1", cfg.port)) {
-      std::cerr << "Failed to bind 127.0.0.1:" << cfg.port << std::endl;
+    std::cerr << "Lego Picture Generator listening on http://" << cfg.bind << ":" << cfg.port
+              << " (hosts:";
+    for (const auto& h : cfg.allowedHosts) {
+      std::cerr << ' ' << h;
+    }
+    std::cerr << ", workers: " << cfg.workerCount
+              << ", trustProxy: " << (cfg.trustProxy ? "yes" : "no")
+              << ", uploads/min/ip: " << cfg.uploadsPerMinute << ")" << std::endl;
+    if (!http.listen(cfg.bind, cfg.port)) {
+      std::cerr << "Failed to bind " << cfg.bind << ":" << cfg.port << std::endl;
       return 1;
     }
     return 0;

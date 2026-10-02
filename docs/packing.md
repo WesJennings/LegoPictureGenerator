@@ -2,9 +2,9 @@
 
 This folder turns a **stud grid of matched LEGO colors** into a **list of physical plates** that cover every stud exactly once. Goal: fewer pieces to buy, using only parts that exist in that color in `data/bricks.db`.
 
-The stud grid is **never modified**. Packers only **read** `studs` and emit `PlacedPart` lists. Implementations are C++ (`native/src/packers.cpp`) with the same control flow as the original Java. See [native.md](native.md).
+The stud grid is **never modified**. Packers only **read** `studs` and emit `PlacedPart` lists. Implementations are C++ (`native/src/engine/packers.cpp`) with the same control flow as the original Java. See [native.md](native.md).
 
-**Docs split:** this README is the high-level map (types, wiring, BOM, research). Step-by-step algorithm explanations live only in [`ALGORITHM_WALKTHROUGH.md`](algorithm-walkthrough.md). Formulas: [`packing/MATH.md`](packing/MATH.md).
+**Docs split:** this file is the high-level map (types, wiring, BOM, research). Step-by-step algorithm explanations live only in [`algorithm-walkthrough.md`](algorithm-walkthrough.md). Formulas: [`packing/MATH.md`](packing/MATH.md).
 
 **Related:** [root](../README.md) · [Color](color.md) · [Image](image.md) · [Architecture](architecture.md) · [MATH index](MATH.md)
 
@@ -29,23 +29,23 @@ After color matching, every cell is one LEGO color. Packing asks:
 
 > Cover every stud with catalog plates so that each stud is covered **exactly once**, every plate is a **single solid color**, the part+color exists in the DB, and we prefer **fewer pieces**.
 
-| # | Mode | Class | One-line strategy |
-|---|------|--------|-------------------|
-| **1** | `greedy` | `GreedyPacker` | Largest-first + multi scan-order + 1×1 repair |
-| **2** | `ilp` | `ExactIlpPacker` | Per-blob B&B set-partition; large blobs → greedy |
-| **3** | `rle` | `RlePacker` | Row RLE strips + vertical merge |
-| **4** | `component` | `ComponentGreedyPacker` | Per-blob largest-first (no repair) |
-| **5** | `dlx` | `DlxPacker` | Same model as ILP; fewest-options Algorithm X search |
-| **6** | `anneal` | `AnnealPacker` | SA local search from a greedy seed |
+| # | Mode | Function | One-line strategy |
+|---|------|----------|-------------------|
+| **1** | `greedy` | `packGreedy` | Largest-first + multi scan-order + 1×1 repair |
+| **2** | `ilp` | `packIlp` | Per-blob B&B set-partition; large blobs → greedy |
+| **3** | `rle` | `packRle` | Row RLE strips + vertical merge |
+| **4** | `component` | `packComponent` | Per-blob largest-first (no repair) |
+| **5** | `dlx` | `packDlx` | Same model as ILP; fewest-options Algorithm X search |
+| **6** | `anneal` | `packAnneal` | SA local search from a greedy seed |
 
 ```text
 studs[][] ──► PlateCatalog ──► packers 1–6 ──► PackResult
                                       │
                                       ▼
-                         PackBom / PackCompare / packed PNGs
+                         BOM text + packed PNGs
 ```
 
-**Not packing’s job:** rewriting `studs`, drawing the flat mosaic (`output_lego.png`), or producing a left-to-right build order (list order is “placement order”).
+**Not packing’s job:** rewriting `studs`, drawing the flat mosaic (`matched.png`), or producing a left-to-right build order (list order is “placement order”).
 
 ---
 
@@ -53,10 +53,10 @@ studs[][] ──► PlateCatalog ──► packers 1–6 ──► PackResult
 
 | File | Role |
 |------|------|
-| `catalog.cpp` (`PlateCatalog`) | Allowed sizes + DB color filter; footprints largest-first |
+| `engine/packers.cpp` | Modes 1–6 (see walkthrough) |
+| `host/catalog.cpp` (`PlateCatalog`) | Allowed sizes + DB color filter; footprints largest-first |
 | `types.hpp` (`PlacedPart` / `PackResult`) | One plate / one algorithm run |
-| `packers.cpp` | Modes 1–6 (see walkthrough) |
-| `text.cpp` | Shopping-list BOM formatting |
+| `host/text.cpp` | Shopping-list BOM formatting |
 
 Algorithms depend on catalog + shared types; BOM only needs `PackResult`. Packers do not write images (`renderer.cpp` does that).
 
@@ -94,7 +94,7 @@ To add a size: put it in `BASE`, ensure it exists in `elements` for the colors y
 
 ## 6. Algorithms → walkthrough
 
-**All algorithm explanations are in [`ALGORITHM_WALKTHROUGH.md`](algorithm-walkthrough.md)** (same numbering 1–6), including ASCII progress on a shared toy grid, side-by-side compare, and a cheat sheet.
+**All algorithm explanations are in [`algorithm-walkthrough.md`](algorithm-walkthrough.md)** (same numbering 1–6), including ASCII progress on a shared toy grid, side-by-side compare, and a cheat sheet.
 
 | # | Walkthrough section |
 |---|---------------------|
@@ -111,10 +111,10 @@ Do not duplicate those walkthroughs here.
 
 ## 7. BOM, wiring, status
 
-**BOM** (`PackBom`): shopping counts by `(partNum, color)` — locations dropped.  
-**Compare** (`PackCompare.compareAll`): piece counts / times / deltas vs greedy.
+**BOM** (`formatBom` in `text.cpp`): shopping counts by `(partNum, color)` — locations dropped.  
+**Compare**: piece counts / times / deltas vs greedy, written by the pipeline.
 
-**Wiring** (`native/src/pipeline.cpp`): load `PlateCatalog` once at startup (`loadCatalog`) → run the requested packers → write `bom-<mode>.txt`, `placements-<mode>.json`, and packed `lego-<mode>.png` into the job's output directory. The web UI requests `greedy`; the CLI accepts any comma-separated mode list.
+**Wiring** (`native/src/host/pipeline.cpp`): load `PlateCatalog` once at startup (`loadCatalog`) → run the requested packers → write `bom-<mode>.txt`, `placements-<mode>.json`, and packed `lego-<mode>.png` into the job's output directory. The web UI requests `greedy`; the CLI accepts any comma-separated mode list.
 
 | Status | Meaning |
 |--------|---------|
@@ -127,11 +127,11 @@ Do not duplicate those walkthroughs here.
 
 ```text
 docs/
-  packing.md                 ← high-level + research (this file)
-  algorithm-walkthrough.md   ← algorithm explanations
-native/src/packers.cpp / native/include/lego/packers.hpp
-native/src/catalog.cpp       ← PlateCatalog + BASE sizes
-native/src/text.cpp          ← BOM formatting
+  packing.md                      ← high-level + research (this file)
+  algorithm-walkthrough.md        ← algorithm explanations
+native/src/engine/packers.cpp / native/include/lego/packers.hpp
+native/src/host/catalog.cpp       ← PlateCatalog + BASE sizes
+native/src/host/text.cpp          ← BOM formatting
 ```
 
 ---
@@ -140,7 +140,7 @@ native/src/text.cpp          ← BOM formatting
 
 These papers are background for what this folder implements. None are required to run the code.
 
-### Exact cover, set partition, ILP / B&B (`ExactIlpPacker`, shared with `DlxPacker`)
+### Exact cover, set partition, ILP / B&B (`packIlp`, shared with `packDlx`)
 
 | Paper | Why it matters here | Link |
 |-------|---------------------|------|
@@ -148,20 +148,20 @@ These papers are background for what this folder implements. None are required t
 | A. H. Land & A. G. Doig, *An Automatic Method of Solving Discrete Programming Problems*, Econometrica 28(3), 1960 | Foundational **branch-and-bound** for integer programs — prune when a partial solution cannot beat the best. | [PDF](https://jmvidal.cse.sc.edu/library/land60a.pdf) |
 | Karla L. Hoffman & Manfred Padberg, *Set Covering, Packing and Partitioning Problems* (survey) | Set cover vs packing vs **partitioning** (`ilp`/`dlx` are set partitioning: each stud covered exactly once). | [PDF](http://seor.vse.gmu.edu/~khoffman/Set_covering_set_packing_set_partitioning.pdf) |
 
-### Algorithm X / DLX heuristic (`DlxPacker`)
+### Algorithm X / DLX heuristic (`packDlx`)
 
 | Paper | Why it matters here | Link |
 |-------|---------------------|------|
-| Donald E. Knuth, *Dancing Links* (same as above) | **Fewest-options column choice** is the classic Algorithm X / DLX branching heuristic our `DlxPacker` uses (vs `ilp`’s lowest-bit order). Full dancing-links lists are optional; the heuristic is the important part. | [arXiv](https://arxiv.org/abs/cs/0011047) |
+| Donald E. Knuth, *Dancing Links* (same as above) | **Fewest-options column choice** is the classic Algorithm X / DLX branching heuristic `packDlx` uses (vs `ilp`’s lowest-bit order). Full dancing-links lists are optional; the heuristic is the important part. | [arXiv](https://arxiv.org/abs/cs/0011047) |
 | Wikipedia: *Knuth’s Algorithm X* | Short readable summary of the matrix formulation and recursive search. | [Article](https://en.wikipedia.org/wiki/Knuth%27s_Algorithm_X) |
 
-### Greedy / largest-first (`GreedyPacker`, `ComponentGreedyPacker`)
+### Greedy / largest-first (`packGreedy`, `packComponent`)
 
 | Paper | Why it matters here | Link |
 |-------|---------------------|------|
 | B. S. Baker, E. G. Coffman Jr. & R. L. Rivest, *Orthogonal Packings in Two Dimensions*, SIAM J. Comput. 9(4), 1980 | Classic **greedy orthogonal rectangle packing** analysis — same family as largest-first plate placement. | [SIAM](https://epubs.siam.org/doi/10.1137/0209064) |
 
-### Row RLE / strip decomposition (`RlePacker`)
+### Row RLE / strip decomposition (`packRle`)
 
 | Paper / source | Why it matters here | Link |
 |----------------|---------------------|------|
@@ -169,18 +169,18 @@ These papers are background for what this folder implements. None are required t
 | [wengraf/LEGOMosaics](https://github.com/wengraf/LEGOMosaics) | Practical mosaic pipeline that merges adjacent same-color groups after “legoizing” — close in spirit to row runs + merge. | [GitHub](https://github.com/wengraf/LEGOMosaics) |
 | Run-length encoding (signal/image processing surveys) | Phase A is literally RLE on each row of a binary color mask before catalog snapping. | [Wikipedia: RLE](https://en.wikipedia.org/wiki/Run-length_encoding) |
 
-### Connected components / flood fill (`ComponentGreedyPacker`, outer loops of `ilp`/`dlx`)
+### Connected components / flood fill (`packComponent`, outer loops of `ilp`/`dlx`)
 
 | Paper | Why it matters here | Link |
 |-------|---------------------|------|
 | A. Rosenfeld & J. L. Pfaltz, *Sequential Operations in Digital Picture Processing*, JACM 13(4), 1966 | Early formal treatment of **connected component** operations on digital images — the ancestor of BFS/DFS blob extraction on a grid. | [ACM](https://dl.acm.org/doi/10.1145/321356.321357) |
 | Connected-component labeling (overview) | Modern summary of 4-/8-connectivity labeling used everywhere in vision pipelines. | [Wikipedia](https://en.wikipedia.org/wiki/Connected-component_labeling) |
 
-### Simulated annealing (`AnnealPacker`)
+### Simulated annealing (`packAnneal`)
 
 | Paper | Why it matters here | Link |
 |-------|---------------------|------|
-| S. Kirkpatrick, C. D. Gelatt & M. P. Vecchi, *Optimization by Simulated Annealing*, Science 220(4598), 1983 | Foundational SA: accept worse moves with `exp(−Δ/T)`, cool `T` — the accept/cool loop in `AnnealPacker`. | [Science](https://www.science.org/doi/10.1126/science.220.4598.671) · [PDF](https://sci2s.ugr.es/sites/default/files/files/Teaching/GraduatesCourses/Metaheuristicas/Bibliography/1983-Science-Kirkpatrick-sim_anneal.pdf) |
+| S. Kirkpatrick, C. D. Gelatt & M. P. Vecchi, *Optimization by Simulated Annealing*, Science 220(4598), 1983 | Foundational SA: accept worse moves with `exp(−Δ/T)`, cool `T` — the accept/cool loop in `packAnneal`. | [Science](https://www.science.org/doi/10.1126/science.220.4598.671) · [PDF](https://sci2s.ugr.es/sites/default/files/files/Teaching/GraduatesCourses/Metaheuristicas/Bibliography/1983-Science-Kirkpatrick-sim_anneal.pdf) |
 | Kathryn A. Dowsland, *Some experiments with simulated annealing techniques for packing problems*, EJOR 68(3), 1993 | Early SA experiments specifically on **packing** layouts — same metaheuristic family as window re-pack moves. | [ScienceDirect](https://www.sciencedirect.com/science/article/abs/pii/037722179390195S) · [DOI](https://doi.org/10.1016/0377-2217(93)90195-s) |
 
 ### LEGO construction / mosaic packing (domain)
@@ -194,27 +194,27 @@ These papers are background for what this folder implements. None are required t
 ### How this maps to our modes
 
 ```text
-1 GreedyPacker (greedy)
+1 packGreedy (greedy)
   ≈ largest-first / multi-start orthogonal packing
     (Baker–Coffman–Rivest; LEGO constructive heuristics)
 
-2 ExactIlpPacker (ilp)
+2 packIlp (ilp)
   ≈ set-partition ILP per blob (Hoffman–Padberg)
     + branch-and-bound (Land–Doig), lowest-bit branching
 
-3 RlePacker (rle)
+3 packRle (rle)
   ≈ row run-length encoding + strip/vertical merge
     (RLE + polyomino/strip tiling practice; LEGOMosaics-style merges)
 
-4 ComponentGreedyPacker (component)
+4 packComponent (component)
   ≈ connected-component decomposition (Rosenfeld lineage)
     + same largest-first inner packer (ablation of repair)
 
-5 DlxPacker (dlx)
+5 packDlx (dlx)
   ≈ same exact-cover model (Knuth Algorithm X)
     + fewest-options column heuristic (DLX spirit)
 
-6 AnnealPacker (anneal)
+6 packAnneal (anneal)
   ≈ Kirkpatrick SA on a packing layout
     (Dowsland-style packing SA; local window re-pack moves)
 ```

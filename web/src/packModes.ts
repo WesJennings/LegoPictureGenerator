@@ -1,4 +1,4 @@
-/** Pack algorithms offered in the UI — matches backend PackMode.modeName. */
+/** Pack algorithms offered in the UI — matches C++ pack mode names. */
 export interface PackModeOption {
   id: string;
   label: string;

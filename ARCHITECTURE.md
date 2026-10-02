@@ -39,24 +39,46 @@ Development: Vite on `:5173` proxies `/api` → `lego_server` on `:8080`.
 
 ## Repository layout
 
-```mermaid
-flowchart TB
-  root["LegoPictureGenerator/"]
-  root --> native["native/<br/>C++17 · API + CLI + engine"]
-  root --> web["web/<br/>React · TypeScript · Vite"]
-  root --> docs["docs/<br/>API, packing, algorithms"]
-  root --> data["data/<br/>bricks.db catalog"]
-  root --> samples["samples/<br/>example photos"]
-  root --> runtime["runtime/<br/>per-job files · gitignored"]
+Two code trees: **`native/`** (C++ host + engine) and **`web/`** (React UI).
+There is no Java / Maven backend.
+
+```text
+LegoPictureGenerator/
+├── Makefile                 # setup / dev / test / start / cli
+├── README.md                # how to run
+├── ARCHITECTURE.md          # this file: layout, layers, pipeline
+├── native/                  # C++17 host + mosaic engine
+│   ├── include/lego/        # public headers (one per module)
+│   ├── src/
+│   │   ├── engine/          # sample · match · pack · render
+│   │   ├── host/            # catalog · jobs · HTTP · pipeline
+│   │   ├── server_main.cpp  # lego_server
+│   │   └── cli_main.cpp     # lego_cli
+│   ├── tests/               # engine + HTTP/job contract tests
+│   └── third_party/         # cpp-httplib, nlohmann/json, stb
+├── web/                     # React + TypeScript + Vite SPA
+│   └── src/
+│       ├── api/             # fetch wrappers + JSON types
+│       ├── pages/           # create job, view results
+│       └── components/
+├── docs/                    # API, algorithms, math (see docs/README.md)
+├── data/                    # bricks.db catalog (gitignored; see data/README.md)
+├── samples/                 # example photos for the CLI
+└── runtime/                 # per-job uploads + outputs (gitignored)
 ```
 
 | Path | Role |
 |------|------|
-| `native/` | HTTP host, jobs, CLI, mosaic engine (see [`docs/native.md`](docs/native.md)) |
+| `native/src/engine/` | Sampler, color matcher, six packers, renderer — no HTTP |
+| `native/src/host/` | SQLite catalog, job queue, HTTP API, pipeline, PNG I/O |
+| `native/src/server_main.cpp` | `lego_server` entry |
+| `native/src/cli_main.cpp` | `lego_cli` entry |
 | `web/` | Upload UI, progress, previews, BOM table |
-| `docs/` | Long-form docs and algorithm walkthroughs |
+| `docs/` | Long-form docs — start at [`docs/README.md`](docs/README.md) |
 | `data/bricks.db` | Rebrickable-derived color + part availability |
 | `runtime/jobs/` | Uploads and outputs for web jobs |
+
+File-by-file map: [`native/README.md`](native/README.md) · [`web/README.md`](web/README.md).
 
 ---
 
@@ -193,14 +215,14 @@ Fixed for now: **`blockSize = 80`** (legacy CLI `BLOCK_SIZE`) — each 80×80 pi
 flowchart LR
   In["input.png"] --> Sample["ImageSampler<br/>blockSize 80"]
   Sample --> Grid["stud grid image"]
-  Grid --> Match["ColorMatcher<br/>nearest LEGO color"]
+  Grid --> Match["ColorMatcher<br/>OKLab nearest brick"]
   Match --> Studs["studs[][] + matched.png"]
   Studs --> Pack["Packer<br/>default: greedy"]
   Pack --> Placed["List of PlacedPart"]
   Studs --> Render["LegoRenderer"]
   Placed --> Render
   Render --> Out["lego-studs.png<br/>lego-greedy.png"]
-  Placed --> Bom["PackBom"]
+  Placed --> Bom["BOM text"]
   Bom --> List["bom-greedy.txt<br/>+ JSON BOM in result"]
 ```
 
@@ -250,14 +272,14 @@ runtime/jobs/<uuid>/
 
 | Goal | Start here |
 |------|------------|
-| HTTP / upload rules | `native/src/http_server.cpp`, `upload_validator.cpp` |
-| Queue / timeout | `native/src/jobs.cpp` |
-| Mosaic steps | `native/src/pipeline.cpp` |
-| Engine / CUDA next | `native/` · [`docs/native.md`](docs/native.md) |
+| HTTP / upload rules | `native/src/host/http_server.cpp`, `upload_validator.cpp` |
+| Queue / timeout | `native/src/host/jobs.cpp` |
+| Mosaic steps | `native/src/host/pipeline.cpp` |
+| Engine / CUDA next | `native/src/engine/` · [`docs/native.md`](docs/native.md) |
 | Block size default | `native/include/lego/types.hpp` |
-| Color matching | `native/src/color_matcher.cpp` + `catalog.cpp` |
-| Packing | `native/src/packers.cpp` |
-| Preview look | `native/src/renderer.cpp` |
+| Color matching | `native/src/engine/color_matcher.cpp` + `host/catalog.cpp` |
+| Packing | `native/src/engine/packers.cpp` |
+| Preview look | `native/src/engine/renderer.cpp` |
 | UI pages | `web/src/pages/`, `web/src/styles/app.css` |
 
 ---
@@ -265,6 +287,8 @@ runtime/jobs/<uuid>/
 ## Related docs
 
 - [`README.md`](README.md) — how to run
+- [`docs/README.md`](docs/README.md) — long-form doc index
+- [`native/README.md`](native/README.md) — C++ file map
 - [`docs/architecture.md`](docs/architecture.md) — safety, retention, config
 - [`docs/api.md`](docs/api.md) — endpoints
 - [`docs/image.md`](docs/image.md) · [`docs/color.md`](docs/color.md) · [`docs/packing.md`](docs/packing.md)
