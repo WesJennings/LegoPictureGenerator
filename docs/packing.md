@@ -1,6 +1,6 @@
 # Pack — LEGO Plate Packing
 
-This folder turns a **stud grid of matched LEGO colors** into a **list of physical plates** that cover every stud exactly once. Goal: fewer pieces to buy, using only parts that exist in that color in `data/bricks.db`.
+Packing turns a **stud grid of matched LEGO colors** into a **list of physical plates** that cover every stud exactly once. Goal: fewer pieces to buy, using only parts that exist in that color in `data/bricks.db`.
 
 The stud grid is **never modified**. Packers only **read** `studs` and emit `PlacedPart` lists. Implementations are C++ (`native/src/engine/packers.cpp`) with the same control flow as the original Java. See [native.md](native.md).
 
@@ -29,8 +29,8 @@ After color matching, every cell is one LEGO color. Packing asks:
 
 > Cover every stud with catalog plates so that each stud is covered **exactly once**, every plate is a **single solid color**, the part+color exists in the DB, and we prefer **fewer pieces**.
 
-| # | Mode | Function | One-line strategy |
-|---|------|----------|-------------------|
+| # | Mode | Entry point | One-line strategy |
+|---|------|-------------|-------------------|
 | **1** | `greedy` | `packGreedy` | Largest-first + multi scan-order + 1×1 repair |
 | **2** | `ilp` | `packIlp` | Per-blob B&B set-partition; large blobs → greedy |
 | **3** | `rle` | `packRle` | Row RLE strips + vertical merge |
@@ -42,10 +42,10 @@ After color matching, every cell is one LEGO color. Packing asks:
 studs[][] ──► PlateCatalog ──► packers 1–6 ──► PackResult
                                       │
                                       ▼
-                         BOM text + packed PNGs
+                         formatBom / placements JSON / packed PNGs
 ```
 
-**Not packing’s job:** rewriting `studs`, drawing the flat mosaic (`matched.png`), or producing a left-to-right build order (list order is “placement order”).
+**Not packing’s job:** rewriting `studs`, drawing the flat mosaic (`matched.png`) or stud preview (`lego-studs.png`), or producing a left-to-right build order (list order is “placement order”).
 
 ---
 
@@ -111,10 +111,9 @@ Do not duplicate those walkthroughs here.
 
 ## 7. BOM, wiring, status
 
-**BOM** (`formatBom` in `text.cpp`): shopping counts by `(partNum, color)` — locations dropped.  
-**Compare**: piece counts / times / deltas vs greedy, written by the pipeline.
+**BOM** (`formatBom` in `text.cpp`): shopping counts by `(partNum, color)` — locations dropped. Side-by-side mode comparison is done in the web UI (`CompareResults`) when multiple modes run; there is no `bom-compare.txt` artifact.
 
-**Wiring** (`native/src/host/pipeline.cpp`): load `PlateCatalog` once at startup (`loadCatalog`) → run the requested packers → write `bom-<mode>.txt`, `placements-<mode>.json`, and packed `lego-<mode>.png` into the job's output directory. The web UI requests `greedy`; the CLI accepts any comma-separated mode list.
+**Wiring** (`native/src/host/pipeline.cpp`): `loadCatalog` once at startup → run the requested packers → write `bom-<mode>.txt`, `placements-<mode>.json`, and packed `lego-<mode>.png` into the job's output directory. The web UI defaults to `greedy`, can pick any single mode or compare-all (all six), and forces `dlx` when `sizing=pieces`; the CLI accepts any comma-separated mode list.
 
 | Status | Meaning |
 |--------|---------|
@@ -138,7 +137,7 @@ native/src/host/text.cpp          ← BOM formatting
 
 ## 8. Research papers & further reading
 
-These papers are background for what this folder implements. None are required to run the code.
+These papers are background for what packing implements. None are required to run the code.
 
 ### Exact cover, set partition, ILP / B&B (`packIlp`, shared with `packDlx`)
 
