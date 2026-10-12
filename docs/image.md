@@ -12,19 +12,24 @@ See also: [sampling/MATH.md](sampling/MATH.md) · [sizing/MATH.md](sizing/MATH.m
 |------|------|
 | `engine/image_sampler.cpp` | Photo → stud grid (box averaging, aspect-preserving) |
 | `engine/renderer.cpp` | Procedural stud / packed-plate PNG pixels (no file I/O) |
-| `host/text.cpp` | Format color tallies into a shopping-list report |
+| `host/text.cpp` | Format color tallies and BOMs into shopping-list reports |
 | `host/image_io.cpp` | Decode upload / encode PNG artifacts |
 
 The pipeline that wires these together is
 `native/src/host/pipeline.cpp`; per-job outputs land in
 `runtime/jobs/<uuid>/` (web) or the directory you pass to the CLI.
 
-## Sampling
+## Sampling (`image_sampler.cpp`)
 
-Replaces the old fixed `BLOCK_SIZE` downscale. You choose the **output** size
-(`targetStudWidth`, 16–128 studs); the sampler derives the height from the
-source aspect ratio and box-averages each output cell over its proportional
-source region:
+Two entry points:
+
+| Function | When used |
+|----------|-----------|
+| `toStudGrid(src, sw, sh, targetStudWidth)` | Classic / stud-width sizing (`targetStudWidth` 16–128; web classic ≈54) |
+| `toStudGridByBlockSize(src, sw, sh, blockSize)` | Block-size path (CLI default `80`; piece-target search probes) |
+
+`toStudGrid` derives height from the source aspect ratio and box-averages each
+output cell over its proportional source region:
 
 ```text
 input photo (w×h pixels)
@@ -43,26 +48,28 @@ Properties worth knowing:
 - Non-divisible dimensions are handled by proportional block edges, so edge
   rows/columns are never dropped.
 
-Entry points: `toStudGrid`, `toStudGridByBlockSize` (`image_sampler.cpp`).
+## Rendering (`renderer.cpp`)
 
-## Rendering
-
-Pure functions — the caller writes files (`image_io.cpp`).
+Pure functions returning ARGB buffers — the caller (`pipeline.cpp` via
+`image_io.cpp`) writes PNGs.
 
 | Function | Draws |
 |----------|--------|
-| `renderStuds(gridArgb, cols, rows, studSizePx)` | Every stud as its own 1×1 visual plate + knob |
-| `renderPacked(gridArgb, cols, rows, studSizePx, placed)` | Multi-stud plates as one continuous body + knobs per stud |
+| `renderStuds(gridArgb, cols, rows, studSizePx)` | Every stud as its own 1×1 visual plate + knob → `lego-studs.png` |
+| `renderPacked(gridArgb, cols, rows, studSizePx, placed)` | Multi-stud plates as one continuous body + knobs per stud → `lego-<mode>.png` |
 
-Colors for packed plates are sampled from the stud grid at each part's origin.
+Colors for packed plates are sampled from `gridArgb` at each part's origin.
 Default stud size is 24 px (`DEFAULT_RENDER_STUD_PX` in `types.hpp`).
 
-## Color-count report
+The flat matched mosaic (no stud texture) is written separately as
+`matched.png` from `matchImage`'s ARGB buffer — that is not a renderer call.
 
-`formatColorCounts` in `text.cpp` does **not** re-scan the grid. It formats
-maps already filled during `matchImage`: total studs (= 1×1 piece count before
-packing) and per-color lines sorted by count. Written to `color-counts.txt`
-per job.
+## Color / BOM text (`text.cpp`)
+
+Does **not** re-scan the grid. Formats maps the pipeline already filled after
+matching (`studGridFromMatch`): total studs (= 1×1 piece count before packing)
+and per-color lines sorted by count → `color-counts.txt`. Packed shopping lists
+use `formatBom`; optional 1×1 stud lists use `formatStudBom` → `bom-studs.txt`.
 
 ## Run
 
