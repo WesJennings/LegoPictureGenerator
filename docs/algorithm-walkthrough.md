@@ -5,7 +5,7 @@ ASCII diagrams only (no Mermaid) so they show correctly in the editor.
 The six algorithms below are implemented in C++ (`native/src/engine/packers.cpp`) with
 the same control flow as the original Java. See [native.md](native.md).
 
-**Docs split:** algorithm explanations live **here**. High-level types, wiring, BOM, and research papers live in [`README.md`](packing.md). Formulas: [`packing/MATH.md`](packing/MATH.md).
+**Docs split:** algorithm explanations live **here**. High-level types, wiring, BOM, and research papers live in [`packing.md`](packing.md). Formulas: [`packing/MATH.md`](packing/MATH.md).
 
 **Numbering:** Setup A–B first, then **algorithms 1–6** (one number per packer), then compare / outputs / cheat sheet.
 
@@ -31,11 +31,11 @@ the same control flow as the original Java. See [native.md](native.md).
   Input PNG
       │
       ▼
-  Downscale to studs
+  Sample to stud grid (toStudGrid / toStudGridByBlockSize)
       │
       ▼
-  matchImage  ──────────────────────►  flat mosaic PNG
-      │                                 (matched.png)
+  matchImage  ──► matched.png (flat matched mosaic)
+      │           + lego-studs.png (renderStuds)
       ▼
   studs[][]  (READ ONLY — never rewritten)
       │
@@ -49,8 +49,8 @@ the same control flow as the original Java. See [native.md](native.md).
                     PackResult (vector<PlacedPart>)
                                  │
                                  ▼
-              BOM + packed LEGO PNGs
-              (bom-<mode>.txt, lego-<mode>.png per job)
+              BOM + packed LEGO PNGs per mode
+              (bom-<mode>.txt, lego-<mode>.png, placements-<mode>.json)
 ```
 
 ```text
@@ -560,7 +560,7 @@ Metaheuristic polish (`packAnneal`): start from a full greedy solution, then ran
   pack()
     │
     ▼
-  seed = packGreedy(studs)     // full multi-order greedy
+  seed = packGreedy(catalog, studs)   // full multi-order greedy
   best = current = seed
   T = temperature
     │
@@ -628,15 +628,17 @@ Metaheuristic polish (`packAnneal`): start from a full greedy solution, then ran
 
 ## 8. How results are used after packing
 
-Each mode returns a `PackResult` → BOM text + packed PNG. Wiring, status strings, and file roles live in [`README.md`](packing.md) (high-level); this walkthrough stops at *how* each packer builds the placement list.
+Each mode returns a `PackResult` → BOM text + packed PNG + placements JSON. Wiring, status strings, and file roles live in [`packing.md`](packing.md) (high-level); this walkthrough stops at *how* each packer builds the placement list.
 
 | Artifact | Source |
 |----------|--------|
-| `bom-<mode>.txt` | Per-mode shopping list |
-| `lego-<mode>.png` | Packed render |
-| `lego-studs.png` | Flat 1×1 mosaic (no packing) |
-| `matched.png` | Color-matched stud grid |
+| `matched.png` | Flat matched mosaic (`matchImage`) |
+| `lego-studs.png` | 1×1 stud preview (`renderStuds`) |
+| `lego-<mode>.png` | Packed render (`renderPacked`) |
+| `bom-<mode>.txt` | Per-mode shopping list (`formatBom`) |
 | `placements-<mode>.json` | Every placed plate |
+| `color-counts.txt` | Per-color stud tally |
+| `bom-studs.txt` | Optional 1×1 stud BOM (`includeStudBom`) |
 
 ---
 
