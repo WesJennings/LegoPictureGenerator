@@ -29,23 +29,23 @@ http://127.0.0.1:8080.
 src/
 ├── main.tsx              # router: / (create) and /jobs/:jobId (results)
 ├── App.tsx               # shell layout
-├── packModes.ts          # pack algorithm labels (matches C++ mode names)
+├── packModes.ts          # pack mode ids + compare-all → API `modes` string
 ├── api/
 │   ├── jobs.ts           # createJob / getJob fetch wrappers
-│   └── types.ts          # JSON contract (docs/api.md)
+│   └── types.ts          # mirrors the backend JSON contract (docs/api.md)
 ├── pages/
-│   ├── CreateJobPage     # dropzone + sizing + pack mode + submit
-│   └── JobPage           # poll until COMPLETE/FAILED, then results
+│   ├── CreateJobPage     # dropzone + sizing + pack mode + stud-BOM toggle
+│   └── JobPage           # 750ms polling until COMPLETE/FAILED, then results
 ├── components/
 │   ├── ImageDropzone     # drag-drop / file picker with preview
-│   ├── MosaicSizing      # classic / stud-aim / piece-aim
-│   ├── MosaicSettings    # extra job options
-│   ├── PackModeSelect    # greedy / compare-all / …
+│   ├── MosaicSizing      # fixed (classic) / pieces sizing controls
+│   ├── MosaicSettings    # stud-width slider (not wired into CreateJobPage)
+│   ├── PackModeSelect    # single mode or compare-all
 │   ├── JobProgress       # pipeline stage chips
-│   ├── PreviewGallery    # packed / stud mosaic / matched flat
+│   ├── PreviewGallery    # packed build / stud mosaic / matched flat
+│   ├── CompareResults    # side-by-side when multiple modes ran
 │   ├── ResultSummary     # grid size, piece count, colors
 │   ├── BomTable          # parts list + .txt download
-│   ├── CompareResults    # side-by-side pack modes
 │   └── ErrorNotice
 └── styles/app.css        # plain CSS, dark theme
 ```
